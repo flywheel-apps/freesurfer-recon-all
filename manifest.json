@@ -1,0 +1,183 @@
+{
+  "name": "freesurfer7",
+  "label": "<Bids-App-Template>: short human-friendly name/description displayed in interface",
+  "description": "<editme Name> (<version>) longer description.",
+  "version": "0.0.0_0.2.3",
+  "custom": {
+    "docker-image": "flywheel/freesurfer7:0.0.0_0.2.3",
+    "gear-builder": {
+      "category": "analysis",
+      "image": "flywheel/freesurfer7:0.0.0_0.2.3"
+    },
+    "flywheel": {
+      "suite": "BIDS Apps"
+    },
+    "license": {
+      "non-commercial-use-only": false,
+      "main": {
+        "name": "BSD-3-Clause",
+        "url": "https://github.com/poldracklab/mriqc/blob/0.15.1/LICENSE.txt"
+      },
+      "dependencies": [
+        {
+          "name": "Other",
+          "url": "https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Licence"
+        },
+        {
+          "name": "Other",
+          "url": "https://github.com/ANTsX/ANTs/blob/v2.2.0/COPYING.txt"
+        },
+        {
+          "name": "Other",
+          "url": "https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.copyright.html"
+        }
+      ]
+    }
+  },
+  "inputs": {
+    "key": {
+      "base": "api-key",
+      "read-only": true
+    },
+    "freesurfer_license": {
+      "description": "FreeSurfer license file, provided during registration with FreeSurfer. This file will by copied to the $FSHOME directory and used during execution of the Gear.",
+      "base": "file",
+      "optional": true
+    },
+    "bidsignore": {
+      "description": "A .bidsignore file to provide to the bids-validator that this gear runs before running the main command.",
+      "base": "file",
+      "optional": true
+    }
+  },
+  "config": {
+    "empty-param": {
+      "default": "",
+      "description": "This will be passed in as an empty string when the gear is run using the SDK even if it is not provided as a config when calling gear.run().",
+      "type": "string"
+    },
+    "bool-param": {
+      "default": false,
+      "description": "some yes or no choice",
+      "type": "boolean"
+    },
+    "num-things": {
+      "description": "number of things that is important to set",
+      "optional": true,
+      "type": "integer"
+    },
+    "name-or-something": {
+      "description": "path to JSON file with settings",
+      "optional": true,
+      "type": "string"
+    },
+    "threshold": {
+      "default": 3.1415926,
+      "description": "threshold eating pie",
+      "type": "number"
+    },
+    "modalities": {
+      "description": "T1w|bold|T2w",
+      "enum": [
+        "",
+        "T1w",
+        "bold",
+        "T2w"
+      ],
+      "optional": true,
+      "type": "string"
+    },
+    "n_procs": {
+      "description": "number of threads",
+      "optional": true,
+      "type": "integer"
+    },
+    "run-id": {
+      "description": "[RUN_ID [RUN_ID ...]]",
+      "optional": true,
+      "type": "string"
+    },
+    "task-id": {
+      "description": "[TASK_ID [TASK_ID ...]]",
+      "optional": true,
+      "type": "string"
+    },
+    "verbose": {
+      "default": "v",
+      "description": "increases log verbosity for each occurrence, debug level is -vvv",
+      "enum": [
+        "",
+        "v",
+        "vv",
+        "vvv"
+      ],
+      "type": "string"
+    },
+    "write-graph": {
+      "default": false,
+      "description": "Write workflow graph",
+      "type": "boolean"
+    },
+    "gear-abort-on-bids-error": {
+      "default": false,
+      "description": "Gear will not run if there are any BIDS errors detected",
+      "type": "boolean"
+    },
+    "gear-log-level": {
+      "default": "INFO",
+      "description": "Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)",
+      "type": "string",
+                        "enum": [
+                                "ERROR",
+                                "WARNING",
+                                "INFO",
+                                "DEBUG"
+                        ]
+    },
+    "gear-run-bids-validation": {
+      "default": true,
+      "description": "Gear will run BIDS validation before mriqc.  If validation fails and gear-abort-on-bids-error is true, mriq will NOT be run.",
+      "type": "boolean"
+    },
+    "gear-save-intermediate-output": {
+      "default": false,
+      "description": "Gear will save ALL intermediate output into <command>_work.zip",
+      "type": "boolean"
+    },
+    "gear-intermediate-files": {
+      "description": "Space separated list of FILES to retain from the intermediate work directory.",
+      "default": "",
+      "type": "string"
+    },
+    "gear-intermediate-folders": {
+      "description": "Space separated list of FOLDERS to retain from the intermediate work directory.",
+      "default": "",
+      "type": "string"
+    },
+    "gear-dry-run": {
+      "default": false,
+      "description": "Do everything except actually executing the command line",
+      "type": "boolean"
+    },
+    "gear-keep-output": {
+      "default": false,
+      "description": "Don't delete output.  Output is always zipped into a single file for easy download.  Choose this option to prevent output deletion after zipping.",
+      "type": "boolean"
+    },
+    "gear-FREESURFER_LICENSE": {
+      "description": "Text from license file generated during FreeSurfer registration. *Entries should be space separated*",
+      "type": "string",
+      "optional": true
+    }   
+  },
+  "environment": {
+    "PYTHONUNBUFFERED": "1"
+  },
+  "command": "python run.py",
+  "author": "Dr. Smartypants, Whatsamatter U",
+  "maintainer": "Flywheel <support@flywheel.io>",
+  "cite": "Dewy, Cheetum, and How; The templatest BIDS app you will ever see; PLOS ONE 12(9):e0184661; doi:10.1371/journal.pone.0184661.",
+  "license": "MIT",
+  "source": "https://github.com/flywheel-apps/freesurfer7",
+  "url": "https://github.com/flywheel-apps/freesurfer7"
+}
