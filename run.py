@@ -52,8 +52,18 @@ def main(gtk_context):
 
     # editme: optional feature
     # get # cpu's to set -openmp
-    cpu_count = str(os.cpu_count())
-    log.info("os.cpu_count() = " + cpu_count)
+    os_cpu_count = str(os.cpu_count())
+    log.info("os.cpu_count() = %s", os_cpu_count)
+    n_cpus = gtk_context.config.get("n_cpus")
+    if n_cpus:
+        if n_cpus > os_cpu_count:
+            log.warning('n_cpus > number available, using %d', os_cpu_count)
+            gtk_context.config["n_cpus"] = os_cpu_count
+        elif n_cpus == 0:
+            log.info('n_cpus == 0, using %d (maximum available)', os_cpu_count)
+            gtk_context.config["n_cpus"] = os_cpu_count
+    else:  # Default is to use all cpus available
+        gtk_context.config["n_cpus"] = os_cpu_count  # zoom zoom
 
     # editme: optional feature
     mem_gb = psutil.virtual_memory().available / (1024 ** 3)
@@ -99,6 +109,14 @@ def main(gtk_context):
     command = build_command_list(command, command_config)
     # print(command)
 
+    # editme: only for --verbose argparse argument
+    for ii, cmd in enumerate(command):
+        if cmd.startswith("--verbose"):
+            # handle a 'count' argparse argument where manifest gives
+            # enumerated possibilities like v, vv, or vvv
+            # e.g. replace "--verbose=vvv' with '-vvv'
+            command[ii] = cmd.split("=")[1]
+
     # editme: if the command needs a freesurfer license keep this
     if Path(FREESURFER_FULLPATH).exists():
         log.debug("%s exists.", FREESURFER_FULLPATH)
@@ -118,7 +136,7 @@ def main(gtk_context):
         # when downloading BIDS
         folders = []  # empty list is no limit
 
-        download_bids_for_runlevel(
+        error_code = download_bids_for_runlevel(
             gtk_context,
             hierarchy,
             tree=tree,
@@ -128,6 +146,8 @@ def main(gtk_context):
             dry_run=gtk_context.config.get("gear-dry-run"),
             do_validate_bids=gtk_context.config.get("gear-run-bids-validation"),
         )
+        if error_code > 0 and not gtk_context.config.get("gear-ignore-bids-errors"):
+            errors.append("BIDS Error(s) detected.  Did not run BIDS App")
 
         # now that work/bids/ exists, copy in the ignore file
         bidsignore_path = gtk_context.get_input_path("bidsignore")
@@ -258,7 +278,10 @@ if __name__ == "__main__":
     gtk_context = flywheel_gear_toolkit.GearToolkitContext()
 
     # Setup basic logging and log the configuration for this job
-    gtk_context.init_logging("debug")
+    if gtk_context["gear-log-level"] == 'INFO':
+        gtk_context.init_logging("info")
+    else:
+        gtk_context.init_logging("debug")
     gtk_context.log_config()
 
     exit_status = main(gtk_context)
