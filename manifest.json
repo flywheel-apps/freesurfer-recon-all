@@ -1,13 +1,13 @@
 {
-  "name": "bids-app-template",
-  "label": "<Bids-App-Template>: short human-friendly name/description displayed in interface",
-  "description": "<editme Name> (<version>) longer description.",
+  "name": "freesurfer7",
+  "label": "FreeSurfer 7.1.0: run recon-all",
+  "description": "FreeSurfer version 7.1.0 (May 11, 2020) longer description.",
   "version": "0.0.0_0.2.3",
   "custom": {
-    "docker-image": "flywheel/bids-app-template:0.0.0_0.2.3",
+    "docker-image": "flywheel/freesurfer7:0.0.0_7.0.1",
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/bids-app-template:0.0.0_0.2.3"
+      "image": "flywheel/freesurfer7:0.0.0_7.0.1"
     },
     "flywheel": {
       "suite": "BIDS Apps"

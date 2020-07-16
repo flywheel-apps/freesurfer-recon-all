@@ -1,4 +1,4 @@
-FROM python:3.8-buster as base
+FROM shotgunosine/freesurfer:75e5a76 as base
 
 LABEL maintainer="support@flywheel.io"
 

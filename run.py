@@ -4,7 +4,6 @@
 import os
 import sys
 import shutil
-import psutil
 import json
 from pathlib import Path
 
@@ -64,10 +63,6 @@ def main(gtk_context):
             gtk_context.config["n_cpus"] = os_cpu_count
     else:  # Default is to use all cpus available
         gtk_context.config["n_cpus"] = os_cpu_count  # zoom zoom
-
-    # editme: optional feature
-    mem_gb = psutil.virtual_memory().available / (1024 ** 3)
-    log.info("psutil.virtual_memory().available= {:4.1f} GiB".format(mem_gb))
 
     # grab environment for gear (saved in Dockerfile)
     with open("/tmp/gear_environ.json", "r") as f:
