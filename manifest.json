@@ -1,13 +1,13 @@
 {
-  "name": "freesurfer7",
+  "name": "freesurfer-recon-all",
   "label": "FreeSurfer 7.1.0: run recon-all",
   "description": "FreeSurfer version 7.1.0 (May 11, 2020) longer description.",
   "version": "0.0.0_0.2.3",
   "custom": {
-    "docker-image": "flywheel/freesurfer7:0.0.0_7.0.1",
+    "docker-image": "flywheel/freesurfer-recon-all:0.0.0_7.0.1",
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/freesurfer7:0.0.0_7.0.1"
+      "image": "flywheel/freesurfer-recon-all:0.0.0_7.0.1"
     },
     "flywheel": {
       "suite": "BIDS Apps"
