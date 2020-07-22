@@ -1,4 +1,4 @@
-# freesurfer7
+# freesurfer-recon-all
 Gear that runs FreeSurfer version 7.1.0 release May 11, 2020
 
 This gear was created using the [bdis-app-template](https://github.com/flywheel-apps/bids-app-template).  For documentation on how to run the tests in this gear, please see that README file.
