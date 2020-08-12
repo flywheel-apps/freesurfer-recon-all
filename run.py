@@ -35,12 +35,12 @@ def main(gtk_context):
 
     log = gtk_context.log
     
-    anat_dir = gtk_context.get_intput_path("tk_context.get_input_path")
-    anat_dir_2 = gtk_context.get_intput_path("t1w_anatomical_2")
-    anat_dir_3 = gtk_context.get_intput_path("t1w_anatomical_3")
-    anat_dir_4 = gtk_context.get_intput_path("t1w_anatomical_4")
-    anat_dir_5 = gtk_context.get_intput_path("t1w_anatomical_5")
-    t2_dir = gtk_context.get_intput_path("t2w_anatomical")
+    anat_dir = gtk_context.get_input_path("tk_context.get_input_path")
+    anat_dir_2 = gtk_context.get_input_path("t1w_anatomical_2")
+    anat_dir_3 = gtk_context.get_input_path("t1w_anatomical_3")
+    anat_dir_4 = gtk_context.get_input_path("t1w_anatomical_4")
+    anat_dir_5 = gtk_context.get_input_path("t1w_anatomical_5")
+    t2_dir = gtk_context.get_input_path("t2w_anatomical")
 
     # Keep a list of errors and warning to print all in one place at end of log
     # Any errors will prevent the command from running and will cause exit(1)

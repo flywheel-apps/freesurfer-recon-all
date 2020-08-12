@@ -49,7 +49,7 @@ def install_gear(zip_name):
         api_dict = None
         with open(config_json) as cjf:
             config_dict = json.load(cjf)
-            pprint(config_dict["inputs"])
+            # pprint(config_dict["inputs"])
             if "api_key" in config_dict["inputs"]:
                 print(f'Found "api_key" in config_dict["inputs"]')
 
@@ -112,32 +112,9 @@ def test_dry_run_works(caplog):
 
         print_caplog(caplog)
 
-        assert Path("/flywheel/v0/work/bids/.bidsignore").exists()
-        assert "No BIDS errors detected." in caplog.messages[30]
-        assert "Zipping work directory" in caplog.messages[48]
-        assert "file:   ./bids/dataset_description.json" in caplog.messages[51]
-        assert "folder: ./reportlets/somecmd/sub-TOME3024/anat" in caplog.messages[53]
-        assert "Could not find file" in caplog.messages[55]
-        assert "gear-dry-run is set" in caplog.messages[57]
+        assert "Zipping work directory" in caplog.messages[30]
+        assert "file:   ./bids/dataset_description.json" in caplog.messages[33]
+        assert "folder: ./reportlets/somecmd/sub-TOME3024/anat" in caplog.messages[35]
+        assert "Could not find file" in caplog.messages[37]
+        assert "gear-dry-run is set" in caplog.messages[39]
         assert status == 0
-
-
-def test_wet_run_works(caplog):
-
-    user_json = Path(Path.home() / ".config/flywheel/user.json")
-    if not user_json.exists():
-        TestCase.skipTest("", f"No API key available in {str(user_json)}")
-
-    caplog.set_level(logging.DEBUG)
-
-    install_gear("wet_run.zip")
-
-    with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
-
-        status = run.main(gtk_context)
-
-        print_caplog(caplog)
-
-        assert "sub-TOME3024_ses-Session2_acq-MPR_T1w.nii.gz" in caplog.messages[29]
-        assert "Not running BIDS validation" in caplog.messages[37]
-        assert "now I generate an error" in caplog.messages[43]
