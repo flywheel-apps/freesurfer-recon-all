@@ -22,12 +22,25 @@ from utils.results.zip_intermediate import zip_all_intermediate_output
 from utils.results.zip_intermediate import zip_intermediate_selected
 
 
-FREESURFER_FULLPATH = "/opt/freesurfer/license.txt"
+GEAR = "freesurfer-recon-all"
+REPO = "flywheel-apps"
+CONTAINER = f"{REPO}/{GEAR}]"
+
+
+FREESURFER_HOME = "/opt/freesurfer"
+LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
 
 def main(gtk_context):
 
     log = gtk_context.log
+    
+    anat_dir = gtk_context.get_intput_path("tk_context.get_input_path")
+    anat_dir_2 = gtk_context.get_intput_path("t1w_anatomical_2")
+    anat_dir_3 = gtk_context.get_intput_path("t1w_anatomical_3")
+    anat_dir_4 = gtk_context.get_intput_path("t1w_anatomical_4")
+    anat_dir_5 = gtk_context.get_intput_path("t1w_anatomical_5")
+    t2_dir = gtk_context.get_intput_path("t2w_anatomical")
 
     # Keep a list of errors and warning to print all in one place at end of log
     # Any errors will prevent the command from running and will cause exit(1)
@@ -49,20 +62,20 @@ def main(gtk_context):
     # can be returned.
     output_analysisid_dir = gtk_context.output_dir / gtk_context.destination["id"]
 
-    # editme: optional feature
     # get # cpu's to set -openmp
     os_cpu_count = str(os.cpu_count())
     log.info("os.cpu_count() = %s", os_cpu_count)
     n_cpus = gtk_context.config.get("n_cpus")
     if n_cpus:
+        del gtk_context.config["n_cpus"]
         if n_cpus > os_cpu_count:
             log.warning('n_cpus > number available, using %d', os_cpu_count)
-            gtk_context.config["n_cpus"] = os_cpu_count
+            gtk_context.config["openmp"] = os_cpu_count
         elif n_cpus == 0:
             log.info('n_cpus == 0, using %d (maximum available)', os_cpu_count)
-            gtk_context.config["n_cpus"] = os_cpu_count
+            gtk_context.config["openmp"] = os_cpu_count
     else:  # Default is to use all cpus available
-        gtk_context.config["n_cpus"] = os_cpu_count  # zoom zoom
+        gtk_context.config["openmp"] = os_cpu_count  # zoom zoom
 
     # grab environment for gear (saved in Dockerfile)
     with open("/tmp/gear_environ.json", "r") as f:
@@ -87,39 +100,43 @@ def main(gtk_context):
     # print("gtk_context.config:", json.dumps(gtk_context.config, indent=4))
 
     # The main command line command to be run:
-    # editme: Set the actual gear command:
-    command = ["./tests/test.sh"]
+    command = ["recon-all"]
 
     # This is also used as part of the name of output files
     command_name = make_file_name_safe(command[0])
 
-    # editme: add positional arguments that the above command needs
-    # 3 positional args: bids path, output dir, 'participant'
-    # This should be done here in case there are nargs='*' arguments
-    # These follow the BIDS Apps definition (https://github.com/BIDS-Apps)
-    command.append(str(gtk_context.work_dir / "bids"))
-    command.append(str(output_analysisid_dir))
-    command.append("participant")
+    if gtk_context.config.get("gear-bids"):
+        # 3 positional args: bids path, output dir, 'participant'
+        # This should be done here in case there are nargs='*' arguments
+        # These follow the BIDS Apps definition (https://github.com/BIDS-Apps)
+        command.append(str(gtk_context.work_dir / "bids"))
+        command.append(str(output_analysisid_dir))
+        command.append("participant")
 
     command = build_command_list(command, command_config)
-    # print(command)
+    single_dash_cmd = []
+    for cmd in command:
+        s_cmd = cmd.split('=')
+        if s_cmd[0].startswith("--"):
+            single_dash_cmd.append(s_cmd[0][1:])
+        else:
+            single_dash_cmd.append(s_cmd[0])
+        if len(s_cmd) == 2:
+            if s_cmd[0].startswith("--"):
+                single_dash_cmd.append(s_cmd[1])
+            else:
+                log()
+    command = single_dash_cmd
+    log.info("command is: %s", str(command))
 
-    # editme: only for --verbose argparse argument
-    for ii, cmd in enumerate(command):
-        if cmd.startswith("--verbose"):
-            # handle a 'count' argparse argument where manifest gives
-            # enumerated possibilities like v, vv, or vvv
-            # e.g. replace "--verbose=vvv' with '-vvv'
-            command[ii] = cmd.split("=")[1]
+    if Path(LICENSE_FILE).exists():
+        log.debug("%s exists.", LICENSE_FILE)
+    install_freesurfer_license(gtk_context, LICENSE_FILE)
 
-    # editme: if the command needs a freesurfer license keep this
-    if Path(FREESURFER_FULLPATH).exists():
-        log.debug("%s exists.", FREESURFER_FULLPATH)
-    install_freesurfer_license(gtk_context, FREESURFER_FULLPATH)
+    # Check for previous freesurfer run
 
-    if len(errors) == 0:
+    if len(errors) == 0 and gtk_context.config.get("gear-bids"):
 
-        # editme: optional feature
         # Create HTML file that shows BIDS "Tree" like output?
         tree = True
         tree_title = f"{command_name} BIDS Tree"
@@ -142,7 +159,7 @@ def main(gtk_context):
             do_validate_bids=gtk_context.config.get("gear-run-bids-validation"),
         )
         if error_code > 0 and not gtk_context.config.get("gear-ignore-bids-errors"):
-            errors.append("BIDS Error(s) detected.  Did not run BIDS App")
+            errors.append(f"BIDS Error(s) detected.  Did not run {CONTAINER}")
 
         # now that work/bids/ exists, copy in the ignore file
         bidsignore_path = gtk_context.get_input_path("bidsignore")
@@ -214,11 +231,9 @@ def main(gtk_context):
             exclude_files=None,
         )
 
-        # editme: optional feature
         # zip any .html files in output/<analysis_id>/
         zip_htmls(gtk_context, output_analysisid_dir)
 
-        # editme: optional feature
         # possibly save ALL intermediate output
         if gtk_context.config.get("gear-save-intermediate-output"):
             zip_all_intermediate_output(gtk_context, run_label)
@@ -281,6 +296,6 @@ if __name__ == "__main__":
 
     exit_status = main(gtk_context)
 
-    gtk_context.log.info("BIDS App Gear is done.  Returning %s", exit_status)
+    gtk_context.log.info("%s Gear is done.  Returning %s", CONTAINER, exit_status)
 
     sys.exit(exit_status)

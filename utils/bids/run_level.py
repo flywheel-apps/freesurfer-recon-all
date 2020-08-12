@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def get_run_level_and_hierarchy(fw, destination_id):
-    """Determin the level at which a job is running, given a destination
+    """Determine the level at which a job is running, given a destination
 
     Args:
         fw (gear_toolkit.GearToolkitContext.client): flywheel client
