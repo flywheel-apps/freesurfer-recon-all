@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """For test(s) *.zip, unzip into directory with same name.
 
-Use "unpack-tests.py all" to unzip every test unless it is 
+Use "unpack-tests.py all" to unzip every test unless it is
 already unzipped.
 
 Example:
@@ -10,10 +10,10 @@ Example:
 """
 
 import argparse
+import glob
 import os
 from pathlib import Path
 from zipfile import ZipFile
-import glob
 
 
 def main():
@@ -34,11 +34,11 @@ def main():
         "./gear_tests",
     ]
     if Path.cwd().parts[-3:] == ("tests", "data", "gear_tests"):
-        print(f"Packing tests in {str(Path.cwd())}")
+        print(f"Unpacking tests in {str(Path.cwd())}")
     else:
         for gtp in gear_test_paths:
             if Path(gtp).exists():
-                print(f"Packing tests in {str(Path(gtp))}")
+                print(f"Unpacking tests in {str(Path(gtp))}")
                 os.chdir(Path(gtp))
 
     if args.test == "all":

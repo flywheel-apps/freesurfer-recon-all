@@ -11,10 +11,11 @@ import flywheel_gear_toolkit
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
 from flywheel_gear_toolkit.interfaces.command_line import build_command_list
 from flywheel_gear_toolkit.interfaces.command_line import exec_command
-from flywheel_gear_toolkit.utils.zip_tools import zip_output
+from flywheel_gear_toolkit.utils.zip_tools import zip_output, unzip_archive
 
 from utils.bids.run_level import get_run_level_and_hierarchy
 from utils.bids.download_run_level import download_bids_for_runlevel
+from utils.fly.despace import despace
 from utils.fly.make_file_name_safe import make_file_name_safe
 from utils.dry_run import pretend_it_ran
 from utils.results.zip_htmls import zip_htmls
@@ -33,9 +34,15 @@ LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
 def main(gtk_context):
 
+    fw = gtk_context.client
+
     log = gtk_context.log
-    
-    anat_dir = gtk_context.get_input_path("tk_context.get_input_path")
+
+    config = gtk_context.config
+
+    subjects_dir = "/opt/freesurfer/subjects"
+
+    anat_dir = gtk_context.get_input_path("anatomical")
     anat_dir_2 = gtk_context.get_input_path("t1w_anatomical_2")
     anat_dir_3 = gtk_context.get_input_path("t1w_anatomical_3")
     anat_dir_4 = gtk_context.get_input_path("t1w_anatomical_4")
@@ -49,9 +56,7 @@ def main(gtk_context):
 
     # Given the destination container, figure out if running at the project,
     # subject, or session level.
-    hierarchy = get_run_level_and_hierarchy(
-        gtk_context.client, gtk_context.destination["id"]
-    )
+    hierarchy = get_run_level_and_hierarchy(fw, gtk_context.destination["id"])
 
     # This is the label of the project, subject or session and is used
     # as part of the name of the output files.
@@ -65,17 +70,17 @@ def main(gtk_context):
     # get # cpu's to set -openmp
     os_cpu_count = str(os.cpu_count())
     log.info("os.cpu_count() = %s", os_cpu_count)
-    n_cpus = gtk_context.config.get("n_cpus")
+    n_cpus = config.get("n_cpus")
     if n_cpus:
-        del gtk_context.config["n_cpus"]
+        del config["n_cpus"]
         if n_cpus > os_cpu_count:
-            log.warning('n_cpus > number available, using %d', os_cpu_count)
-            gtk_context.config["openmp"] = os_cpu_count
+            log.warning("n_cpus > number available, using %d", os_cpu_count)
+            config["openmp"] = os_cpu_count
         elif n_cpus == 0:
-            log.info('n_cpus == 0, using %d (maximum available)', os_cpu_count)
-            gtk_context.config["openmp"] = os_cpu_count
+            log.info("n_cpus == 0, using %d (maximum available)", os_cpu_count)
+            config["openmp"] = os_cpu_count
     else:  # Default is to use all cpus available
-        gtk_context.config["openmp"] = os_cpu_count  # zoom zoom
+        config["openmp"] = os_cpu_count  # zoom zoom
 
     # grab environment for gear (saved in Dockerfile)
     with open("/tmp/gear_environ.json", "r") as f:
@@ -89,7 +94,7 @@ def main(gtk_context):
 
     # get config for command by skipping gear config parameters
     command_config = {}
-    for key, val in gtk_context.config.items():
+    for key, val in config.items():
         if not key.startswith("gear-"):
             command_config[key] = val
     # print("command_config:", json.dumps(command_config, indent=4))
@@ -105,37 +110,67 @@ def main(gtk_context):
     # This is also used as part of the name of output files
     command_name = make_file_name_safe(command[0])
 
-    if gtk_context.config.get("gear-bids"):
+    if Path(LICENSE_FILE).exists():
+        log.debug("%s exists.", LICENSE_FILE)
+    install_freesurfer_license(gtk_context, LICENSE_FILE)
+
+    # recon-all can be run in one of three ways:
+    # 1) re-running a previous run (if .zip file is provided)
+    # 2) on BIDS formatted data determined by the run level (project, subject, session)
+    # 3) by providing anatomical files as input to the gear
+
+    # Check for previous freesurfer run
+    find = [f for f in Path(anat_dir).rglob("freesurfer-recon-all*.zip")]
+    if len(find) == 0:
+        existing_run = False
+    else:
+        if len(find) > 1:
+            log.warning(
+                "Found %d previous freesurfer runs. Using first", len(find)
+            )
+        fs_archive = find[0]
+        existing_run = True
+        unzip_archive(fs_archive, subjects_dir)
+        try:
+            zip = zipfile.ZipFile(
+                config["inputs"]["anatomical"]["location"]["path"]
+            )
+            subject_id = zip.namelist()[0].split("/")[0]
+        except:
+            subject_id = ""
+        if subject_id == "":
+            if config.get("subject_id"):
+                subject_id = config["config"]["subject_id"]
+        else:
+            subject_id = fw.get_analysis(
+                gtk_context.destination["id"]
+            ).parents.subject
+            subject = fw.get_subject(subject_id)
+            subject_id = subject.label
+        subject_id = make_file_name_safe(subject_id)
+        if not Path(subjects_dir / subject_id).exists():
+            log.critical(
+                "%s  No SUBJECT DIR could be found! Cannot continue. Exiting",
+                CONTAINER,
+            )
+        log.info(
+            "%s  recon-all running from previous run...(recon-all -subjid %s %s",
+            subject_id,
+            recon_all_opts,
+            CONTAINER,
+        )
+        # recon-all -subjid "${SUBJECT_ID}" ${RECON_ALL_OPTS}
+        command.append("-subjid")
+        command.append(subject_id)
+
+    if not existing_run and len(errors) == 0 and config.get("gear-bids"):
+
         # 3 positional args: bids path, output dir, 'participant'
         # This should be done here in case there are nargs='*' arguments
         # These follow the BIDS Apps definition (https://github.com/BIDS-Apps)
         command.append(str(gtk_context.work_dir / "bids"))
         command.append(str(output_analysisid_dir))
         command.append("participant")
-
-    command = build_command_list(command, command_config)
-    single_dash_cmd = []
-    for cmd in command:
-        s_cmd = cmd.split('=')
-        if s_cmd[0].startswith("--"):
-            single_dash_cmd.append(s_cmd[0][1:])
-        else:
-            single_dash_cmd.append(s_cmd[0])
-        if len(s_cmd) == 2:
-            if s_cmd[0].startswith("--"):
-                single_dash_cmd.append(s_cmd[1])
-            else:
-                log()
-    command = single_dash_cmd
-    log.info("command is: %s", str(command))
-
-    if Path(LICENSE_FILE).exists():
-        log.debug("%s exists.", LICENSE_FILE)
-    install_freesurfer_license(gtk_context, LICENSE_FILE)
-
-    # Check for previous freesurfer run
-
-    if len(errors) == 0 and gtk_context.config.get("gear-bids"):
 
         # Create HTML file that shows BIDS "Tree" like output?
         tree = True
@@ -166,11 +201,10 @@ def main(gtk_context):
         if bidsignore_path:
             shutil.copy(bidsignore_path, "work/bids/.bidsignore")
             log.info("Installed .bidsignore in work/bids/")
+        existing_run = True
 
-        # see https://github.com/bids-standard/pybids/tree/master/examples
-        # for any necessary work on the bids files inside the gear, perhaps
-        # to query results or count stuff to estimate how long things will take.
-        # Add that stuff to utils/bids.py
+    #if not existing_run and len(errors) == 0:
+        # Check for input files: anatomical NIfTI or DICOM archive
 
     # Don't run if there were errors or if this is a dry run
     ok_to_run = True
@@ -197,6 +231,23 @@ def main(gtk_context):
             # Create output directory
             log.info("Creating output directory %s", output_analysisid_dir)
             Path(output_analysisid_dir).mkdir()
+
+            # add configuration parameters to the command
+            command = build_command_list(command, command_config)
+            single_dash_cmd = []
+            for cmd in command:
+                s_cmd = cmd.split("=")
+                if s_cmd[0].startswith("--"):
+                    single_dash_cmd.append(s_cmd[0][1:])
+                else:
+                    single_dash_cmd.append(s_cmd[0])
+                if len(s_cmd) == 2:
+                    if s_cmd[0].startswith("--"):
+                        single_dash_cmd.append(s_cmd[1])
+                    else:
+                        log()
+            command = single_dash_cmd
+            log.info("command is: %s", str(command))
 
             # This is what it is all about
             exec_command(command, environ=environ)
@@ -288,7 +339,7 @@ if __name__ == "__main__":
     gtk_context = flywheel_gear_toolkit.GearToolkitContext()
 
     # Setup basic logging and log the configuration for this job
-    if gtk_context["gear-log-level"] == 'INFO':
+    if gtk_context["gear-log-level"] == "INFO":
         gtk_context.init_logging("info")
     else:
         gtk_context.init_logging("debug")

@@ -42,12 +42,13 @@ main() {
         shift
     done
 
-    DOCKER_IMAGE="flywheel/bids-app-template:${DOCKER_TAG}"
-
     VER=$(cat manifest.json | jq -r '.version')
-    DOCKER_IMAGE_NAME=$(cat manifest.json | jq '.custom."gear-builder".image')
-    DOCKER_IMAGE_NAME=$( echo $DOCKER_IMAGE_NAME | tr -d '"' )
-    echo "DOCKER_IMAGE_NAME is" $DOCKER_IMAGE_NAME 
+    DOCKER_IMAGE_NAME=$(cat manifest.json | jq '.custom."gear-builder".image' | tr -d '"')
+    echo "DOCKER_IMAGE_NAME is" $DOCKER_IMAGE_NAME
+
+    MANIFEST_NAME=$(cat manifest.json | jq '.name'  | tr -d '"')
+    TESTING_IMAGE="flywheel/${MANIFEST_NAME}:${DOCKER_TAG}"
+    echo "TESTING_IMAGE is $TESTING_IMAGE"
 
     if [ "${BUILD_IMAGE}" == "1" ]; then
 
@@ -57,26 +58,25 @@ main() {
 
         echo docker build -f "${DOCKERFILE}" \
           --build-arg DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME} \
-          -t "${DOCKER_IMAGE}" .
+          -t "${TESTING_IMAGE}" .
 
         docker build -f "${DOCKERFILE}" \
           --build-arg DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME} \
-          -t "${DOCKER_IMAGE}" .
-
+          -t "${TESTING_IMAGE}" .
     fi
 
     echo docker run -it --rm \
         --volume "$(pwd):/src" \
         --volume "$HOME/.config/flywheel:/root/.config/flywheel" \
         "${ENTRY_POINT}" \
-        "${DOCKER_IMAGE}" \
+        "${TESTING_IMAGE}" \
         "$@"
 
     docker run -it --rm \
         --volume "$(pwd):/src" \
         --volume "$HOME/.config/flywheel:/root/.config/flywheel" \
         "${ENTRY_POINT}" \
-        "${DOCKER_IMAGE}" \
+        "${TESTING_IMAGE}" \
         "$@"
 
 }

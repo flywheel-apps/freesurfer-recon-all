@@ -81,6 +81,27 @@ def print_caplog(caplog):
         print(f"{ii:2d} {rec}")
 
 
+def search_caplog(caplog, find_me):
+    """Search caplog message for find_me, return message"""
+
+    for msg in caplog.messages:
+        if find_me in msg:
+            return msg
+    return ""
+
+
+def search_caplog_contains(caplog, find_me, contains_me):
+    """Search caplog message for find_me, return true if it contains contins_me"""
+
+    for msg in caplog.messages:
+        if find_me in msg:
+            print(f"Found '{find_me}' in '{msg}'")
+            if contains_me in msg:
+                print(f"Found '{contains_me}' in '{msg}'")
+                return True
+    return False
+
+
 def print_captured(captured):
 
     print("\nout")
@@ -112,9 +133,11 @@ def test_dry_run_works(caplog):
 
         print_caplog(caplog)
 
-        assert "Zipping work directory" in caplog.messages[30]
-        assert "file:   ./bids/dataset_description.json" in caplog.messages[33]
-        assert "folder: ./reportlets/somecmd/sub-TOME3024/anat" in caplog.messages[35]
-        assert "Could not find file" in caplog.messages[37]
-        assert "gear-dry-run is set" in caplog.messages[39]
+        assert search_caplog(caplog, "Zipping work directory")
+        assert search_caplog(caplog, "file:   ./bids/dataset_description.jso")
+        assert search_caplog(caplog, "folder: ./reportlets/somecmd/sub-TOME3024/anat")
+        assert search_caplog(
+            caplog, "Could not find file 'anatsub-TOME3024_desc-about_T1w.html'"
+        )
+        assert search_caplog(caplog, "Warning: gear-dry-run is set")
         assert status == 0

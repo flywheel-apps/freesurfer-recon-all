@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """A robust template for accessing BIDS formatted data."""
 
-from pathlib import Path
 import json
 import logging
+from pathlib import Path
 
 from flywheel import ApiException
 from flywheel_bids.export_bids import download_bids_dir
+
 from utils.bids.errors import BIDSExportError
 
-from .validate import validate_bids
 from .tree import tree_bids
-
+from .validate import validate_bids
 
 log = logging.getLogger(__name__)
 
@@ -94,8 +94,8 @@ def download_bids_for_runlevel(
 
     Args:
         gtk_context (gear_toolkit.GearToolkitContext): flywheel gear context
-        hierarchy (dict): containing the run_level and labels for the 
-            run_label, group, project, subject, session, and 
+        hierarchy (dict): containing the run_level and labels for the
+            run_label, group, project, subject, session, and
             acquisition.
         tree (boolean): create HTML page in output showing 'tree' of bids data
         src_data (boolean): download source data (dicoms) as well
@@ -155,7 +155,9 @@ def download_bids_for_runlevel(
 
         elif gtk_context.destination["type"] == "acquisition":
             log.info("Destination is acquisition, changing run_level to " "acquisition")
-            acquisition = gtk_context.client.get(gtk_context.destination["id"])
+            acquisition = gtk_context.client.get_acquisition(
+                gtk_context.destination["id"]
+            )
             hierarchy["acquisition_label"] = acquisition.label
             extra_tree_text += (
                 f'  {"acquisition_label":<18}: changed to ' + f"{acquisition.label}\n\n"
@@ -204,7 +206,9 @@ def download_bids_for_runlevel(
 
             elif run_level == "subject":
 
-                log.info('Downloading BIDS for subject "%s"', hierarchy["subject_code"])
+                log.info(
+                    'Downloading BIDS for subject "%s"', hierarchy["subject_label"]
+                )
 
                 if Path(BIDS_DIR).exists():
                     bids_path = BIDS_DIR
@@ -215,7 +219,7 @@ def download_bids_for_runlevel(
                         src_data=src_data,
                         folders=folders,
                         dry_run=dry_run,
-                        subjects=[hierarchy["subject_code"]],
+                        subjects=[hierarchy["subject_label"]],
                     )
 
             elif run_level == "session":
@@ -233,7 +237,7 @@ def download_bids_for_runlevel(
                         src_data=src_data,
                         folders=folders,
                         dry_run=dry_run,
-                        subjects=[hierarchy["subject_code"]],
+                        subjects=[hierarchy["subject_label"]],
                         sessions=[hierarchy["session_label"]],
                     )
 

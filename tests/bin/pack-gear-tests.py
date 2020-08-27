@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""For directory/ies in the current directory zip into a test 
-.zip archive with same name. 
+"""For directory/ies in the current directory zip into a test
+.zip archive with same name.
 
 This will REMOVE the test .zip file if it already exists and it
 will remove the test directory after zipping.
@@ -14,11 +14,11 @@ Example:
 """
 
 import argparse
-import os
-from pathlib import Path
-from zipfile import ZipFile, ZIP_DEFLATED
 import glob
+import os
 import shutil
+from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 
 def main():
