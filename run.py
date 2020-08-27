@@ -1,27 +1,30 @@
 #!/usr/bin/env python3
 """Run the gear: set up for and call command-line command."""
 
-import os
-import sys
-import shutil
 import json
+import os
+import shutil
+import sys
 from pathlib import Path
 
 import flywheel_gear_toolkit
+from flywheel_gear_toolkit.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
-from flywheel_gear_toolkit.interfaces.command_line import build_command_list
-from flywheel_gear_toolkit.interfaces.command_line import exec_command
-from flywheel_gear_toolkit.utils.zip_tools import zip_output, unzip_archive
+from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
 
-from utils.bids.run_level import get_run_level_and_hierarchy
 from utils.bids.download_run_level import download_bids_for_runlevel
+from utils.bids.run_level import get_run_level_and_hierarchy
+from utils.dry_run import pretend_it_ran
 from utils.fly.despace import despace
 from utils.fly.make_file_name_safe import make_file_name_safe
-from utils.dry_run import pretend_it_ran
 from utils.results.zip_htmls import zip_htmls
-from utils.results.zip_intermediate import zip_all_intermediate_output
-from utils.results.zip_intermediate import zip_intermediate_selected
-
+from utils.results.zip_intermediate import (
+    zip_all_intermediate_output,
+    zip_intermediate_selected,
+)
 
 GEAR = "freesurfer-recon-all"
 REPO = "flywheel-apps"
@@ -125,16 +128,12 @@ def main(gtk_context):
         existing_run = False
     else:
         if len(find) > 1:
-            log.warning(
-                "Found %d previous freesurfer runs. Using first", len(find)
-            )
+            log.warning("Found %d previous freesurfer runs. Using first", len(find))
         fs_archive = find[0]
         existing_run = True
         unzip_archive(fs_archive, subjects_dir)
         try:
-            zip = zipfile.ZipFile(
-                config["inputs"]["anatomical"]["location"]["path"]
-            )
+            zip = zipfile.ZipFile(config["inputs"]["anatomical"]["location"]["path"])
             subject_id = zip.namelist()[0].split("/")[0]
         except:
             subject_id = ""
@@ -142,9 +141,7 @@ def main(gtk_context):
             if config.get("subject_id"):
                 subject_id = config["config"]["subject_id"]
         else:
-            subject_id = fw.get_analysis(
-                gtk_context.destination["id"]
-            ).parents.subject
+            subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
             subject = fw.get_subject(subject_id)
             subject_id = subject.label
         subject_id = make_file_name_safe(subject_id)
@@ -206,6 +203,7 @@ def main(gtk_context):
     if not existing_run and len(errors) == 0:
         # Check for input files: anatomical NIfTI or DICOM archive
         despace(anat_dir)
+        anatomical = [f for f in Path(anat_dir).rglob("*.nii")]
 
     # Don't run if there were errors or if this is a dry run
     ok_to_run = True
