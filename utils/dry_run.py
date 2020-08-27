@@ -1,9 +1,8 @@
 """Run this instead of running actual command"""
 
-import os
 import logging
+import os
 from pathlib import Path
-
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ def pretend_it_ran(context):
             Path(ff).touch(mode=0o777, exist_ok=True)
 
     html = """<html>
-    <head> 
+    <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>sub-TOME3024</title>
     </head>

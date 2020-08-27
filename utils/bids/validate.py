@@ -36,12 +36,11 @@ Example:
     See validate_bids() below for an example of calling call_validate_bids().
 """
 
+import json
+import logging
+import pprint
 import subprocess as sp
 from pathlib import Path
-import logging
-import json
-import pprint
-
 
 log = logging.getLogger(__name__)
 

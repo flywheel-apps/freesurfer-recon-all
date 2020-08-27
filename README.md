@@ -5,7 +5,7 @@ This gear was created using the [bdis-app-template](https://github.com/flywheel-
 
 # Inputs
 ### bidsignore (optional)
-A list of patterns (like .gitignore syntax) defining files that should be ignored by the 
+A list of patterns (like .gitignore syntax) defining files that should be ignored by the
 bids validator.
 
 ### freesurfer_license (optional)
@@ -32,31 +32,31 @@ Gear argument: Run BIDS App even if BIDS errors are detected when gear runs bids
 Gear argument: Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)
 
 ### gear-save-intermediate-output (optional)
-Gear argument: The BIDS App is run in a "work/" directory.  Setting this will save ALL 
+Gear argument: The BIDS App is run in a "work/" directory.  Setting this will save ALL
 contents of that directory including downloaded BIDS data.  The file will be named
 "<BIDS App>_work_<run label>_<analysis id>.zip"
 
 ### gear-intermediate-files (optional)
-Gear argument: A space separated list of FILES to retain from the intermediate work 
+Gear argument: A space separated list of FILES to retain from the intermediate work
 directory.  Files are saved into "<BIDS App>_work_selected_<run label>_<analysis id>.zip"
 
 ### gear-intermediate-folders (optional)
-Gear argument: A space separated list of FOLDERS to retain from the intermediate work 
+Gear argument: A space separated list of FOLDERS to retain from the intermediate work
 directory.  Files are saved into "<BIDS App>_work_selected_<run label>_<analysis id>.zip"
 
 ### gear-dry-run (optional)
 Gear argument: Do everything except actually executing the BIDS App.
 
 ### gear-keep-output (optional)
-Gear argument: Don't delete output.  Output is always zipped into a single file for 
+Gear argument: Don't delete output.  Output is always zipped into a single file for
 easy download.  Choose this option to prevent output deletion after zipping.
 
 ### gear-FREESURFER_LICENSE (optional)
-Gear argument: Text from license file generated during FreeSurfer registration. 
+Gear argument: Text from license file generated during FreeSurfer registration.
 Copy the contents of the license file and paste it into this argument.
 
 # Workflow
-This gear runs a short bash script that helps test the functionality of this 
+This gear runs a short bash script that helps test the functionality of this
 bids-app-teamplate.
 
 # Outputs

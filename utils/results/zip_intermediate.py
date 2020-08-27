@@ -1,16 +1,15 @@
 """Save files from work/, compressed in output/."""
 
-import os
 import logging
+import os
 import subprocess as sp
-
 
 log = logging.getLogger(__name__)
 
 
 def zip_intermediate_selected(context, run_label):
     """
-    Find all of the listed files and folders in the "work/" directory and zip 
+    Find all of the listed files and folders in the "work/" directory and zip
     them into one archive.
     """
 

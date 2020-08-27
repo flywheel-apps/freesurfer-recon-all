@@ -13,9 +13,8 @@ Example:
     Produces an HTML file with `tree` like output for the path "work/bids".
 """
 
-from pathlib import Path
 import logging
-
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 

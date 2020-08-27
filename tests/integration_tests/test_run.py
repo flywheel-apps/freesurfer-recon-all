@@ -2,13 +2,13 @@
 """
 """
 
-import os
-from pathlib import Path
-import shutil
-from unittest import TestCase
-import logging
 import json
+import logging
+import os
+import shutil
+from pathlib import Path
 from pprint import pprint
+from unittest import TestCase
 
 import flywheel_gear_toolkit
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive

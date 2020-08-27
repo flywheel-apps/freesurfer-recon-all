@@ -1,15 +1,15 @@
 """Unit test for running BIDS validation"""
 
-from os import chdir
-import logging
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-import pytest
 import json
+import logging
 import subprocess as sp
+from os import chdir
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from utils.bids.validate import validate_bids
-
 
 DATA_ROOT = Path("tests/data").resolve()
 

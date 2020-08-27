@@ -2,16 +2,15 @@
 
 import datetime
 import glob
-import os
 import logging
+import os
 import subprocess as sp
-
 
 log = logging.getLogger(__name__)
 
 
 def zip_it_zip_it_good(context, name):
-    """ Compress html file into an appropriately named archive file *.html.zip 
+    """ Compress html file into an appropriately named archive file *.html.zip
     files are automatically shown in another tab in the browser. These are
     saved at the top level of the output folder."""
 
@@ -31,7 +30,7 @@ def zip_htmls(context, path):
     """ Zip all .html files at the given path so they can be displayed
         on the Flywheel platform.
         Each html file must be converted into an archive individually:
-          rename each to be "index.html", then create a zip archive from it.  
+          rename each to be "index.html", then create a zip archive from it.
     """
 
     log.info("Creating viewable archives for all html files")

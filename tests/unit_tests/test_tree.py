@@ -1,7 +1,7 @@
 """Unit test for running tree system command"""
 
-from os import chdir
 import logging
+from os import chdir
 from pathlib import Path
 
 from utils.bids.tree import tree_bids

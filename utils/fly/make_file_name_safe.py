@@ -3,12 +3,11 @@
 import logging
 import re
 
-
 log = logging.getLogger(__name__)
 
 
 def make_file_name_safe(input_basename, replace_str=""):
-    """Remove non-safe characters from a filename and return a filename with 
+    """Remove non-safe characters from a filename and return a filename with
         these characters replaced with replace_str.
 
     :param input_basename: the input basename of the file to be replaced
