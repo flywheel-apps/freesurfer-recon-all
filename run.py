@@ -203,8 +203,9 @@ def main(gtk_context):
             log.info("Installed .bidsignore in work/bids/")
         existing_run = True
 
-    #if not existing_run and len(errors) == 0:
+    if not existing_run and len(errors) == 0:
         # Check for input files: anatomical NIfTI or DICOM archive
+        despace(anat_dir)
 
     # Don't run if there were errors or if this is a dry run
     ok_to_run = True
