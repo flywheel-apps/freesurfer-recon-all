@@ -51,7 +51,6 @@ def get_run_level_and_hierarchy(fw, destination_id):
 
         if destination.parents["subject"]:
             subject = fw.get(destination.parents["subject"])
-            print(subject)
             # subject_code = subject.code
             subject_label = subject.label
             # subject_master_code = subject.master_code

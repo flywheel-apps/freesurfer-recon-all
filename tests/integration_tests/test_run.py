@@ -116,6 +116,80 @@ def print_captured(captured):
 #  Tests
 #
 
+ANATOMICAL_STR = "anatomical is '/flywheel/v0/input/anatomical/dicoms/1.2.826.0.1.3680043.8.498.81096423295716363709677774784503056177.MR.dcm'"
+
+
+def test_prev_works(caplog):
+
+    user_json = Path(Path.home() / ".config/flywheel/user.json")
+    if not user_json.exists():
+        TestCase.skipTest("", f"No API key available in {str(user_json)}")
+
+    caplog.set_level(logging.DEBUG)
+
+    install_gear("prev.zip")
+
+    with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
+
+        status = run.main(gtk_context)
+
+        assert search_caplog(caplog, "Warning: gear-dry-run is set")
+        command = search_caplog(caplog, "command is:")
+        assert command[34:56] == "'-subjid', 'TOME_3024'"
+        assert status == 0
+
+
+def test_nii2_works(caplog):
+
+    user_json = Path(Path.home() / ".config/flywheel/user.json")
+    if not user_json.exists():
+        TestCase.skipTest("", f"No API key available in {str(user_json)}")
+
+    caplog.set_level(logging.DEBUG)
+
+    install_gear("nii2.zip")
+
+    with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
+
+        status = run.main(gtk_context)
+
+        assert search_caplog(caplog, "Warning: gear-dry-run is set")
+        command = search_caplog(caplog, "command is:")
+        assert command[34:86] == "'-i', '/flywheel/v0/input/anatomical/T1w_MPR.nii.gz'"
+        assert (
+            command[89:146]
+            == "-i', '/flywheel/v0/input/t1w_anatomical_2/T1w_MPR.nii.gz'"
+        )
+        assert "-openmp" in command
+        assert status == 0
+
+
+def test_dcm_zip_works(caplog):
+
+    user_json = Path(Path.home() / ".config/flywheel/user.json")
+    if not user_json.exists():
+        TestCase.skipTest("", f"No API key available in {str(user_json)}")
+
+    caplog.set_level(logging.DEBUG)
+
+    install_gear("dcm_zip.zip")
+
+    with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
+
+        status = run.main(gtk_context)
+
+        print_caplog(caplog)
+
+        assert search_caplog(caplog, ANATOMICAL_STR)
+        assert search_caplog(caplog, "Warning: gear-dry-run is set")
+        command = search_caplog(caplog, "command is:")
+        assert (
+            command[12:78]
+            == "['time', 'recon-all', '-i', '/flywheel/v0/input/anatomical/dicoms/"
+        )
+        assert "-openmp" in command
+        assert status == 0
+
 
 def test_dry_run_works(caplog):
 

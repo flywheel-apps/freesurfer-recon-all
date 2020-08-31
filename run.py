@@ -5,13 +5,11 @@ import json
 import os
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 import flywheel_gear_toolkit
-from flywheel_gear_toolkit.interfaces.command_line import (
-    build_command_list,
-    exec_command,
-)
+from flywheel_gear_toolkit.interfaces.command_line import exec_command
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
 
@@ -30,7 +28,11 @@ GEAR = "freesurfer-recon-all"
 REPO = "flywheel-apps"
 CONTAINER = f"{REPO}/{GEAR}]"
 
+FLYWHEEL_BASE = Path("/flywheel/v0")
+OUTPUT_DIR = Path(FLYWHEEL_BASE / "output")
+INPUT_DIR = Path(FLYWHEEL_BASE / "input")
 
+SUBJECTS_DIR = Path("/opt/freesurfer/subjects")
 FREESURFER_HOME = "/opt/freesurfer"
 LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
@@ -43,27 +45,17 @@ def main(gtk_context):
 
     config = gtk_context.config
 
-    subjects_dir = "/opt/freesurfer/subjects"
-
-    anat_dir = gtk_context.get_input_path("anatomical")
-    anat_dir_2 = gtk_context.get_input_path("t1w_anatomical_2")
-    anat_dir_3 = gtk_context.get_input_path("t1w_anatomical_3")
-    anat_dir_4 = gtk_context.get_input_path("t1w_anatomical_4")
-    anat_dir_5 = gtk_context.get_input_path("t1w_anatomical_5")
-    t2_dir = gtk_context.get_input_path("t2w_anatomical")
+    anat_dir = INPUT_DIR / "anatomical"
+    anat_dir_2 = INPUT_DIR / "t1w_anatomical_2"
+    anat_dir_3 = INPUT_DIR / "t1w_anatomical_3"
+    anat_dir_4 = INPUT_DIR / "t1w_anatomical_4"
+    anat_dir_5 = INPUT_DIR / "t1w_anatomical_5"
+    t2_dir = INPUT_DIR / "t2w_anatomical"
 
     # Keep a list of errors and warning to print all in one place at end of log
     # Any errors will prevent the command from running and will cause exit(1)
     errors = []
     warnings = []
-
-    # Given the destination container, figure out if running at the project,
-    # subject, or session level.
-    hierarchy = get_run_level_and_hierarchy(fw, gtk_context.destination["id"])
-
-    # This is the label of the project, subject or session and is used
-    # as part of the name of the output files.
-    run_label = make_file_name_safe(hierarchy["run_label"])
 
     # Output will be put into a directory named as the destination id.
     # This allows the raw output to be deleted so that a zipped archive
@@ -100,7 +92,7 @@ def main(gtk_context):
     for key, val in config.items():
         if not key.startswith("gear-"):
             command_config[key] = val
-    # print("command_config:", json.dumps(command_config, indent=4))
+    print("command_config:", json.dumps(command_config, indent=4))
 
     # Validate the command parameter dictionary - make sure everything is
     # ready to run so errors will appear before launching the actual gear
@@ -108,59 +100,80 @@ def main(gtk_context):
     # print("gtk_context.config:", json.dumps(gtk_context.config, indent=4))
 
     # The main command line command to be run:
-    command = ["recon-all"]
+    command = ["time", "recon-all"]
 
     # This is also used as part of the name of output files
-    command_name = make_file_name_safe(command[0])
+    command_name = make_file_name_safe(command[1])
 
     if Path(LICENSE_FILE).exists():
         log.debug("%s exists.", LICENSE_FILE)
     install_freesurfer_license(gtk_context, LICENSE_FILE)
+
+    subject_id = config.get("subject_id")
+    if not subject_id:
+        subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
+        subject = fw.get(subject_id)
+        subject_id = subject.label
+    run_label = subject_id  # used in output file names
+
+    work_dir = Path("/tmp/" + subject_id)
+    if not work_dir.is_symlink():
+        work_dir.symlink_to(SUBJECTS_DIR / subject_id)
 
     # recon-all can be run in one of three ways:
     # 1) re-running a previous run (if .zip file is provided)
     # 2) on BIDS formatted data determined by the run level (project, subject, session)
     # 3) by providing anatomical files as input to the gear
 
-    # Check for previous freesurfer run
-    find = [f for f in Path(anat_dir).rglob("freesurfer-recon-all*.zip")]
+    # 1) Check for previous freesurfer run
+    find = [f for f in anat_dir.rglob("freesurfer-recon-all*.zip")]
     if len(find) == 0:
         existing_run = False
     else:
+        log.debug("subject_id 0 %s", subject_id)
         if len(find) > 1:
             log.warning("Found %d previous freesurfer runs. Using first", len(find))
         fs_archive = find[0]
         existing_run = True
-        unzip_archive(fs_archive, subjects_dir)
+        unzip_archive(str(fs_archive), SUBJECTS_DIR)
         try:
-            zip = zipfile.ZipFile(config["inputs"]["anatomical"]["location"]["path"])
+            zip = zipfile.ZipFile(fs_archive)
             subject_id = zip.namelist()[0].split("/")[0]
+            log.debug("subject_id 1 %s", subject_id)
         except:
             subject_id = ""
         if subject_id == "":
             if config.get("subject_id"):
                 subject_id = config["config"]["subject_id"]
+                log.debug("subject_id 2 %s", subject_id)
         else:
             subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
             subject = fw.get_subject(subject_id)
             subject_id = subject.label
+            log.debug("subject_id 3 %s", subject_id)
         subject_id = make_file_name_safe(subject_id)
-        if not Path(subjects_dir / subject_id).exists():
-            log.critical(
-                "%s  No SUBJECT DIR could be found! Cannot continue. Exiting",
-                CONTAINER,
-            )
+        if not Path(SUBJECTS_DIR / subject_id).exists():
+            log.critical("No SUBJECT DIR could be found! Cannot continue. Exiting")
+            sys.exit(1)
         log.info(
-            "%s  recon-all running from previous run...(recon-all -subjid %s %s",
-            subject_id,
-            recon_all_opts,
-            CONTAINER,
+            "recon-all running from previous run...(recon-all -subjid %s)", subject_id,
         )
         # recon-all -subjid "${SUBJECT_ID}" ${RECON_ALL_OPTS}
         command.append("-subjid")
         command.append(subject_id)
+        run_label = subject_id  # used in output file names
 
+    # 2) BIDS formatted data
     if not existing_run and len(errors) == 0 and config.get("gear-bids"):
+
+        # Given the destination container, figure out if running at the project,
+        # subject, or session level.
+        hierarchy = get_run_level_and_hierarchy(fw, gtk_context.destination["id"])
+
+        # This is the label of the project, subject or session and is used
+        # as part of the name of the output files.  It might be a session or
+        # project label depending on the run-level.
+        run_label = make_file_name_safe(hierarchy["run_label"])
 
         # 3 positional args: bids path, output dir, 'participant'
         # This should be done here in case there are nargs='*' arguments
@@ -199,11 +212,97 @@ def main(gtk_context):
             shutil.copy(bidsignore_path, "work/bids/.bidsignore")
             log.info("Installed .bidsignore in work/bids/")
         existing_run = True
+        log.critical("BIDS IS NOT YET IMPLEMENTED")
 
+    # 3) provide anatomical files as input to the gear
     if not existing_run and len(errors) == 0:
         # Check for input files: anatomical NIfTI or DICOM archive
         despace(anat_dir)
-        anatomical = [f for f in Path(anat_dir).rglob("*.nii")]
+        anatomical_list = [f for f in anat_dir.rglob("*.nii*")]
+        if len(anatomical_list) == 1:
+            anatomical = str(anatomical_list[0])
+
+        elif len(anatomical_list) == 0:
+            # assume a directory of DICOM files was provided
+            # find all regular files that are not hidden and are not in a hidden
+            # directory.  Like this bash command:
+            # ANATOMICAL=$(find $INPUT_DIR/* -not -path '*/\.*' -type f | head -1)
+            anatomical_list = [
+                f
+                for f in INPUT_DIR.rglob("[!.]*")
+                if "/." not in str(f) and f.is_file()
+            ]
+
+            if len(anatomical_list) == 0:
+                log.critical(
+                    "Anatomical input could not be found in %s! Exiting (1)",
+                    str(anat_dir),
+                )
+                os.system(f"ls -lRa {str(anat_dir)}")
+                sys.exit(1)
+
+            anatomical = str(anatomical_list[0])
+            if anatomical.endswith(".zip"):
+                dicom_dir = anat_dir / "dicoms"
+                dicom_dir.mkdir()
+                unzip_archive(anatomical, dicom_dir)
+                despace(dicom_dir)
+                anatomical_list = [
+                    f
+                    for f in dicom_dir.rglob("[!.]*")
+                    if "/." not in str(f) and f.is_file()
+                ]
+                anatomical = str(anatomical_list[0])
+
+        else:
+            log.warning("What?  Found %s NIfTI files!", len(anatomical_list))
+
+        log.info("anatomical is '%s'", anatomical)
+
+        # Proccess additoinal anatomical inputs
+        add_inputs = ""
+        for anat_dir in (anat_dir_2, anat_dir_3, anat_dir_4, anat_dir_5):
+            if anat_dir.is_dir():
+                despace(anat_dir)
+                anatomical_list = [f for f in anat_dir.rglob("*.nii*") if f.is_file()]
+                if len(anatomical_list) > 0:
+                    log.info(
+                        "Adding %s to the processing stream...", anatomical_list[0]
+                    )
+                    add_inputs += f"-i {str(anatomical_list[0])} "
+
+        # T2 input file
+        if t2_dir.is_dir():
+            despace(t2_dir)
+            anatomical_list = [f for f in t2_dir.rglob("*.nii*") if f.is_file()]
+            if len(anatomical_list) > 0:
+                log.info("Adding %s to the processing stream...", anatomical_list[0])
+                add_inputs += f"-i {str(anatomical_list[0])} "
+
+        add_inputs = add_inputs[:-1]  # so split below won't add extra empty string
+
+        command.append("-i")
+        command.append(anatomical)
+        if add_inputs:
+            command += [ww for ww in add_inputs.split(" ")]
+        command.append("-subjid")
+        command.append(subject_id)
+
+    # add configuration parameters to the command
+    if "subject_id" in command_config:  # this was already handled
+        command_config.pop("subject_id")
+    for key, val in command_config.items():
+        # print(f"key:{key} val:{val} type:{type(val)}")
+        if key == "reconall_options":
+            command += [ww for ww in val.split(" ")]
+        elif isinstance(val, bool):
+            if val:
+                command.append(f"-{key}")
+        else:
+            command.append(f"-{key}")
+            command.append(f"{val}")
+
+    log.info("command is: %s", str(command))
 
     # Don't run if there were errors or if this is a dry run
     ok_to_run = True
@@ -230,23 +329,6 @@ def main(gtk_context):
             # Create output directory
             log.info("Creating output directory %s", output_analysisid_dir)
             Path(output_analysisid_dir).mkdir()
-
-            # add configuration parameters to the command
-            command = build_command_list(command, command_config)
-            single_dash_cmd = []
-            for cmd in command:
-                s_cmd = cmd.split("=")
-                if s_cmd[0].startswith("--"):
-                    single_dash_cmd.append(s_cmd[0][1:])
-                else:
-                    single_dash_cmd.append(s_cmd[0])
-                if len(s_cmd) == 2:
-                    if s_cmd[0].startswith("--"):
-                        single_dash_cmd.append(s_cmd[1])
-                    else:
-                        log()
-            command = single_dash_cmd
-            log.info("command is: %s", str(command))
 
             # This is what it is all about
             exec_command(command, environ=environ)
@@ -338,7 +420,7 @@ if __name__ == "__main__":
     gtk_context = flywheel_gear_toolkit.GearToolkitContext()
 
     # Setup basic logging and log the configuration for this job
-    if gtk_context["gear-log-level"] == "INFO":
+    if gtk_context.config["gear-log-level"] == "INFO":
         gtk_context.init_logging("info")
     else:
         gtk_context.init_logging("debug")
