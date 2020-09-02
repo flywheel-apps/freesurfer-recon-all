@@ -157,7 +157,7 @@ def test_validate_bids_called_process_error(caplog, tmp_path, json_file):
 
     caplog.set_level(logging.DEBUG)
 
-    completed_process = sp.run("which bids-validator", shell=True)
+    completed_process = sp.run("type bids-validator", shell=True)
     if completed_process.returncode != 0:
         pytest.skip("bids-validator is not installed")
 

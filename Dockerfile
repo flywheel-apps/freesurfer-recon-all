@@ -1,17 +1,36 @@
-FROM shotgunosine/freesurfer:75e5a76 as base
+FROM freesurfer/freesurfer:7.1.1 as base
 
 LABEL maintainer="support@flywheel.io"
 
-RUN apt-get update && \
-    curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
-    apt-get install -y \
-    zip \
-    nodejs \
-    tree && \
-    rm -rf /var/lib/apt/lists/*
-# The last line above is to help keep the docker image smaller
+RUN (curl -sL https://rpm.nodesource.com/setup_12.x | bash -) \
+  && yum clean all -y \
+  && yum update -y \
+  && yum install -y zip nodejs tree \
+  && yum autoremove -y \
+  && yum clean all -y \
+  && npm install npm --global
 
 RUN npm install -g bids-validator@1.5.4
+
+# Set CPATH for packages relying on compiled libs (e.g. indexed_gzip)
+ENV PATH="/root/miniconda3/bin:$PATH" \
+    CPATH="/root/miniconda3/include/:$CPATH" \
+    LANG="C.UTF-8" \
+    PYTHONNOUSERSITE=1
+
+# Get a new version of python that can run flywheel
+RUN wget \
+    https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-Linux-x86_64.sh \
+    && mkdir /root/.conda \
+    && bash Miniconda3-py38_4.8.3-Linux-x86_64.sh -b \
+    && rm -f Miniconda3-py38_4.8.3-Linux-x86_64.sh
+
+# Installing precomputed python packages
+RUN conda install -y python=3.8.5 && \
+    chmod -R a+rX /root/miniconda3; sync && \
+    chmod +x /root/miniconda3/bin/*; sync && \
+    conda build purge-all; sync && \
+    conda clean -tipsy && sync
 
 COPY requirements.txt /tmp
 RUN pip install -r /tmp/requirements.txt && \
