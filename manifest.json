@@ -18,11 +18,6 @@
       "base": "api-key",
       "read-only": true
     },
-    "freesurfer_license_file": {
-      "description": "FreeSurfer license file, provided during registration with FreeSurfer. This file will by copied to the $FSHOME directory and used during execution of the Gear.",
-      "base": "file",
-      "optional": true
-    },
     "anatomical": {
       "description": "Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive. NOTE: A freesurfer-recon-all Gear output can be used provided the filename is preserved from its initial output (e.g., freesurfer-recon-all_<subject_code>*.zip)",
       "base": "file",
@@ -117,7 +112,7 @@
       "default": "-all -qcache",
       "type": "string"
     },
-    "freesurfer_license": {
+    "gear-FREESURFER_LICENSE": {
       "description": "Text from license file generated during FreeSurfer registration. Entries should be space separated.",
       "type": "string",
       "optional": true
