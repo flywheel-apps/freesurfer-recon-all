@@ -1,13 +1,13 @@
 {
   "name": "freesurfer-recon-all",
-  "label": "FreeSurfer 7.1.0: run recon-all",
+  "label": "FreeSurfer 7.1.1: run recon-all",
   "description": "FreeSurfer version 7.1.0 (May 11, 2020) This gear takes an anatomical NIfTI file and performs all of the FreeSurfer cortical reconstruction process. Outputs are provided in a zip file and include the entire output directory tree from Recon-All. Configuration options exist for setting the subject ID and for converting outputs to NIfTI, OBJ, and CSV. FreeSurfer is a software package for the analysis and visualization of structural and functional neuroimaging data from cross-sectional or longitudinal studies. It is developed by the Laboratory for Computational Neuroimaging at the Athinoula A. Martinos Center for Biomedical Imaging. Please see https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense for license information.",
-  "version": "0.0.0_7.1.1",
+  "version": "0.0.3_7.1.1",
   "custom": {
-    "docker-image": "flywheel/freesurfer-recon-all:0.0.0_7.1.1",
+    "docker-image": "flywheel/freesurfer-recon-all:0.0.3_7.1.1",
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/freesurfer-recon-all:0.0.0_7.1.1"
+      "image": "flywheel/freesurfer-recon-all:0.0.3_7.1.1"
     },
     "flywheel": {
       "suite": "FreeSurfer"
@@ -169,7 +169,7 @@
       ]
     },
     "gear-run-bids-validation": {
-      "default": true,
+      "default": false,
       "description": "Gear will run BIDS validation after downloading data.  If validation fails and gear-abort-on-bids-error is true, recon-all will NOT be run.",
       "type": "boolean"
     },
@@ -207,7 +207,7 @@
   "environment": {
     "PYTHONUNBUFFERED": "1"
   },
-  "command": "python run.py",
+  "command": "/root/miniconda3/bin/python3 run.py",
   "author": "Laboratory for Computational Neuroimaging <freesurfer@nmr.mgh.harvard.edu>",
   "maintainer": "Flywheel <support@flywheel.io>",
   "cite": "For citation information, please visit: https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferMethodsCitation.",

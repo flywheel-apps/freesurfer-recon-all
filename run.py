@@ -18,7 +18,6 @@ from utils.bids.run_level import get_run_level_and_hierarchy
 from utils.dry_run import pretend_it_ran
 from utils.fly.despace import despace
 from utils.fly.make_file_name_safe import make_file_name_safe
-from utils.results.zip_htmls import zip_htmls
 from utils.results.zip_intermediate import (
     zip_all_intermediate_output,
     zip_intermediate_selected,
@@ -37,7 +36,7 @@ FREESURFER_HOME = "/usr/local/freesurfer"
 LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
 
-def do_gear_hippocampal_subfields(mri_dir):
+def do_gear_hippocampal_subfields(subject_id, mri_dir, environ, log):
 
     log.info("Starting segmentation of hippicampal subfields...")
     cmd = ["recon-all", "-subjid", subject_id, "-hippocampal-subfields-T1"]
@@ -59,7 +58,7 @@ def do_gear_hippocampal_subfields(mri_dir):
     exec_command(cmd, environ=environ)
 
 
-def do_gear_brainstem_structures(mri_dir, subject_id, environ):
+def do_gear_brainstem_structures(mri_dir, subject_id, environ, log):
     log.info("Starting segmentation of brainstem subfields...")
     cmd = ["recon-all", "-subjid", subject_id, "-brainstem-structures"]
     exec_command(cmd, environ=environ)
@@ -379,7 +378,7 @@ def main(gtk_context):
             exec_command(command, environ=environ, shell=True)
 
             # Optional Segmentations
-            mri_dir = f"{subjects_dir}/{subject_id}/mri"
+            mri_dir = f"{subject_dir}/{subject_id}/mri"
 
             if config.get("gear-hippocampal_subfields"):
                 do_gear_hippocampal_subfields(mri_dir, subject_id, environ)
@@ -410,7 +409,7 @@ def main(gtk_context):
             # Convert selected surfaces in subject/surf to obj in output
             if config.get("gear-convert_surfaces"):
                 log.info("Converting surfaces to object (.obj) files...")
-                surf_dir = f"{subjects_dir}/{subject_id}/surf"
+                surf_dir = f"{subject_dir}/{subject_id}/surf"
                 surfaces = [
                     "lh.pial",
                     "rh.pial",
@@ -428,7 +427,7 @@ def main(gtk_context):
                     exec_command(cmd, environ=environ)
                     cmd = [
                         f"{FLYWHEEL_BASE}/srf2obj",
-                        f"{SURF_DIR}/{surf}.asc",
+                        f"{surf_dir}/{surf}.asc",
                         ">",
                         f"{OUTPUT_DIR}/{surf}.obj",
                     ]
