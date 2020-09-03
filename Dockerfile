@@ -6,11 +6,16 @@ RUN (curl -sL https://rpm.nodesource.com/setup_12.x | bash -) \
   && yum clean all -y \
   && yum update -y \
   && yum install -y zip nodejs tree \
-  && yum autoremove -y \
   && yum clean all -y \
   && npm install npm --global
 
 RUN npm install -g bids-validator@1.5.4
+
+RUN source $FREESURFER_HOME/SetUpFreeSurfer.sh
+
+# Save docker environ
+ENV PYTHONUNBUFFERED 1
+RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
 # Set CPATH for packages relying on compiled libs (e.g. indexed_gzip)
 ENV PATH="/root/miniconda3/bin:$PATH" \
@@ -39,10 +44,6 @@ RUN pip install -r /tmp/requirements.txt && \
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
 WORKDIR ${FLYWHEEL}
-
-# Save docker environ
-ENV PYTHONUNBUFFERED 1
-RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
 # Copy executable/manifest to Gear
 COPY manifest.json ${FLYWHEEL}/manifest.json

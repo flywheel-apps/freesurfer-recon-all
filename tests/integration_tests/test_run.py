@@ -119,6 +119,32 @@ def print_captured(captured):
 ANATOMICAL_STR = "anatomical is '/flywheel/v0/input/anatomical/dicoms/1.2.826.0.1.3680043.8.498.81096423295716363709677774784503056177.MR.dcm'"
 
 
+def test_dry_run_works(caplog):
+
+    user_json = Path(Path.home() / ".config/flywheel/user.json")
+    if not user_json.exists():
+        TestCase.skipTest("", f"No API key available in {str(user_json)}")
+
+    caplog.set_level(logging.DEBUG)
+
+    install_gear("dry_run.zip")
+
+    with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
+
+        status = run.main(gtk_context)
+
+        print_caplog(caplog)
+
+        assert search_caplog(caplog, "Zipping work directory")
+        assert search_caplog(caplog, "file:   ./bids/dataset_description.jso")
+        assert search_caplog(caplog, "folder: ./reportlets/somecmd/sub-TOME3024/anat")
+        assert search_caplog(
+            caplog, "Could not find file 'anatsub-TOME3024_desc-about_T1w.html'"
+        )
+        assert search_caplog(caplog, "Warning: gear-dry-run is set")
+        assert status == 0
+
+
 def test_prev_works(caplog):
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
@@ -191,7 +217,10 @@ def test_dcm_zip_works(caplog):
         assert status == 0
 
 
-def test_dry_run_works(caplog):
+def test_wet_run_works(caplog):
+
+    # clean up after previous tests so this one will run
+    shutil.rmtree("/usr/local/freesurfer/subjects/TOME_3024")
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
@@ -199,7 +228,7 @@ def test_dry_run_works(caplog):
 
     caplog.set_level(logging.DEBUG)
 
-    install_gear("dry_run.zip")
+    install_gear("wet_run.zip")
 
     with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
 
@@ -207,11 +236,9 @@ def test_dry_run_works(caplog):
 
         print_caplog(caplog)
 
-        assert search_caplog(caplog, "Zipping work directory")
-        assert search_caplog(caplog, "file:   ./bids/dataset_description.jso")
-        assert search_caplog(caplog, "folder: ./reportlets/somecmd/sub-TOME3024/anat")
         assert search_caplog(
-            caplog, "Could not find file 'anatsub-TOME3024_desc-about_T1w.html'"
+            caplog,
+            "Zipping output file freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip",
         )
-        assert search_caplog(caplog, "Warning: gear-dry-run is set")
-        assert status == 0
+        assert search_caplog(caplog, "ERROR: All entries are zero!")
+        assert status == 1

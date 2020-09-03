@@ -117,40 +117,40 @@
       "default": "-all -qcache",
       "type": "string"
     },
-    "hippocampal_subfields": {
-      "description": "Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. Choosing this option will write <subject_id>_HippocampalSubfields.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfields for more info. (Default=true)",
-      "default": true,
-      "type": "boolean"
-    },
-    "brainstem_structures": {
-      "description": "Generate automated segmentation of four different brainstem structures from the input T1 scan: medulla oblongata, pons, midbrain and superior cerebellar peduncle (SCP). We use a Bayesian segmentation algorithm that relies on a probabilistic atlas of the brainstem (and neighboring brain structures) built upon manual delineations of the structures on interest in 49 scans (10 for the brainstem structures, 39 for the surrounding structures). The delineation protocol for the brainstem was designed by Dr. Adam Boxer and his team at the UCSF Memory and Aging Center, and is described in the paper. Choosing this option will write <subject_id>_BrainstemStructures.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/BrainstemSubstructures for more info. (Default=true)",
-      "default": true,
-      "type": "boolean"
-    },
-    "register_surfaces": {
-      "description": "Runs the xhemireg and surfreg scripts on your subject after having run recon-all in order to register the subject's left and inverted-right hemispheres to the fsaverage_sym subject. (The fsaverage_sym subject is a version of the fsaverage subject with a single the left-right symmetric pseudo-hemisphere.) (Default=true)",
-      "default": true,
-      "type": "boolean"
-    },
-    "convert_surfaces": {
-      "description": "Convert selected FreeSurfer surface files to OBJ format. (Default=true)",
-      "default": true,
-      "type": "boolean"
-    },
-    "convert_volumes": {
-      "description": "Convert selected FreeSurfer volume files (mgz) to NIfTI format. (Default=true)",
-      "default": true,
-      "type": "boolean"
-    },
-    "convert_stats": {
-      "description": "Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical stats file created by recon-all and/or mri_segstats (eg, aseg.stats) into a table in which each line is a subject and each column is a segmentation. The values are the volume of the segmentation in mm3 or the mean intensity over the structure. Also Converts a cortical stats file created by recon-all and or mris_anatomical_stats (eg, ?h.aparc.stats) into a table in which each line is a subject and each column is a parcellation. By default, the values are the area of the parcellation in mm2.",
-      "default": true,
-      "type": "boolean"
-    },
     "freesurfer_license": {
       "description": "Text from license file generated during FreeSurfer registration. Entries should be space separated.",
       "type": "string",
       "optional": true
+    },
+    "gear-hippocampal_subfields": {
+      "description": "Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. Choosing this option will write <subject_id>_HippocampalSubfields.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfields for more info. (Default=true)",
+      "default": true,
+      "type": "boolean"
+    },
+    "gear-brainstem_structures": {
+      "description": "Generate automated segmentation of four different brainstem structures from the input T1 scan: medulla oblongata, pons, midbrain and superior cerebellar peduncle (SCP). We use a Bayesian segmentation algorithm that relies on a probabilistic atlas of the brainstem (and neighboring brain structures) built upon manual delineations of the structures on interest in 49 scans (10 for the brainstem structures, 39 for the surrounding structures). The delineation protocol for the brainstem was designed by Dr. Adam Boxer and his team at the UCSF Memory and Aging Center, and is described in the paper. Choosing this option will write <subject_id>_BrainstemStructures.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/BrainstemSubstructures for more info. (Default=true)",
+      "default": true,
+      "type": "boolean"
+    },
+    "gear-register_surfaces": {
+      "description": "Runs the xhemireg and surfreg scripts on your subject after having run recon-all in order to register the subject's left and inverted-right hemispheres to the fsaverage_sym subject. (The fsaverage_sym subject is a version of the fsaverage subject with a single the left-right symmetric pseudo-hemisphere.) (Default=true)",
+      "default": true,
+      "type": "boolean"
+    },
+    "gear-convert_surfaces": {
+      "description": "Convert selected FreeSurfer surface files to OBJ format. (Default=true)",
+      "default": true,
+      "type": "boolean"
+    },
+    "gear-convert_volumes": {
+      "description": "Convert selected FreeSurfer volume files (mgz) to NIfTI format. (Default=true)",
+      "default": true,
+      "type": "boolean"
+    },
+    "gear-convert_stats": {
+      "description": "Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical stats file created by recon-all and/or mri_segstats (eg, aseg.stats) into a table in which each line is a subject and each column is a segmentation. The values are the volume of the segmentation in mm3 or the mean intensity over the structure. Also Converts a cortical stats file created by recon-all and or mris_anatomical_stats (eg, ?h.aparc.stats) into a table in which each line is a subject and each column is a parcellation. By default, the values are the area of the parcellation in mm2.",
+      "default": true,
+      "type": "boolean"
     },
     "gear-bids": {
       "default": false,

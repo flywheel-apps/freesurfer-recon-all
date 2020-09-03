@@ -26,15 +26,57 @@ from utils.results.zip_intermediate import (
 
 GEAR = "freesurfer-recon-all"
 REPO = "flywheel-apps"
-CONTAINER = f"{REPO}/{GEAR}]"
+CONTAINER = f"{REPO}/{GEAR}"
 
 FLYWHEEL_BASE = Path("/flywheel/v0")
 OUTPUT_DIR = Path(FLYWHEEL_BASE / "output")
 INPUT_DIR = Path(FLYWHEEL_BASE / "input")
 
-SUBJECTS_DIR = Path("/opt/freesurfer/subjects")
-FREESURFER_HOME = "/opt/freesurfer"
+SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
+FREESURFER_HOME = "/usr/local/freesurfer"
 LICENSE_FILE = FREESURFER_HOME + "/license.txt"
+
+
+def do_gear_hippocampal_subfields(mri_dir):
+
+    log.info("Starting segmentation of hippicampal subfields...")
+    cmd = ["recon-all", "-subjid", subject_id, "-hippocampal-subfields-T1"]
+    exec_command(cmd, environ=environ)
+    cmd = [
+        "quantifyHippocampalSubfields.sh",
+        "T1",
+        f"{mri_dir}/HippocampalSubfields.txt",
+    ]
+    exec_command(cmd, environ=environ)
+    cmd = [
+        "tr",
+        " ",
+        "," "<",
+        f"{mri_dir}/HippocampalSubfields.txt",
+        ">",
+        f"{OUTPUT_DIR}/{subject_id}_HippocampalSubfields.csv",
+    ]
+    exec_command(cmd, environ=environ)
+
+
+def do_gear_brainstem_structures(mri_dir, subject_id, environ):
+    log.info("Starting segmentation of brainstem subfields...")
+    cmd = ["recon-all", "-subjid", subject_id, "-brainstem-structures"]
+    exec_command(cmd, environ=environ)
+    cmd = [
+        "quantifyBrainstemStructures.sh",
+        f"{mri_dir}/BrainstemStructures.txt",
+    ]
+    exec_command(cmd, environ=environ)
+    cmd = [
+        "tr",
+        " ",
+        "," "<",
+        f"{mri_dir}/BrainstemStructures.txt",
+        ">",
+        f"{OUTPUT_DIR}/{subject_id}_BrainstemStructures.csv",
+    ]
+    exec_command(cmd, environ=environ)
 
 
 def main(gtk_context):
@@ -56,11 +98,6 @@ def main(gtk_context):
     # Any errors will prevent the command from running and will cause exit(1)
     errors = []
     warnings = []
-
-    # Output will be put into a directory named as the destination id.
-    # This allows the raw output to be deleted so that a zipped archive
-    # can be returned.
-    output_analysisid_dir = gtk_context.output_dir / gtk_context.destination["id"]
 
     # get # cpu's to set -openmp
     os_cpu_count = str(os.cpu_count())
@@ -116,9 +153,11 @@ def main(gtk_context):
         subject_id = subject.label
     run_label = subject_id  # used in output file names
 
-    work_dir = Path("/tmp/" + subject_id)
+    subject_dir = Path(SUBJECTS_DIR / subject_id)
+    # subject_dir.mkdir()
+    work_dir = Path(gtk_context.output_dir / subject_id)
     if not work_dir.is_symlink():
-        work_dir.symlink_to(SUBJECTS_DIR / subject_id)
+        work_dir.symlink_to(subject_dir)
 
     # recon-all can be run in one of three ways:
     # 1) re-running a previous run (if .zip file is provided)
@@ -174,6 +213,15 @@ def main(gtk_context):
         # as part of the name of the output files.  It might be a session or
         # project label depending on the run-level.
         run_label = make_file_name_safe(hierarchy["run_label"])
+
+        # Output will be put into a directory named as the destination id.
+        # This allows the raw output to be deleted so that a zipped archive
+        # can be returned.
+        output_analysisid_dir = gtk_context.output_dir / subject_id
+
+        # Create output directory
+        log.info("Creating output directory %s", output_analysisid_dir)
+        Path(output_analysisid_dir).mkdir()
 
         # 3 positional args: bids path, output dir, 'participant'
         # This should be done here in case there are nargs='*' arguments
@@ -288,9 +336,10 @@ def main(gtk_context):
         command.append("-subjid")
         command.append(subject_id)
 
-    # add configuration parameters to the command
     if "subject_id" in command_config:  # this was already handled
         command_config.pop("subject_id")
+
+    # add configuration parameters to the command
     for key, val in command_config.items():
         # print(f"key:{key} val:{val} type:{type(val)}")
         if key == "reconall_options":
@@ -326,12 +375,126 @@ def main(gtk_context):
 
             returncode = 0
 
-            # Create output directory
-            log.info("Creating output directory %s", output_analysisid_dir)
-            Path(output_analysisid_dir).mkdir()
-
             # This is what it is all about
-            exec_command(command, environ=environ)
+            exec_command(command, environ=environ, shell=True)
+
+            # Optional Segmentations
+            mri_dir = f"{subjects_dir}/{subject_id}/mri"
+
+            if config.get("gear-hippocampal_subfields"):
+                do_gear_hippocampal_subfields(mri_dir, subject_id, environ)
+
+            if config.get("gear-brainstem_structures"):
+                do_gear_brainstem_structures(mri_dir, subject_id, environ)
+
+            if config.get("gear-register_surfaces"):
+                log.info("Running surface registrations...")
+                # Register hemispheres
+                cmd = ["xhemireg", "--s", subject_id]
+                exec_command(cmd, environ=environ)
+                # Register the left hemisphere to fsaverage_sym
+                cmd = ["surfreg", "--s", subject_id, "--t", "fsaverage_sym", "--lh"]
+                exec_command(cmd, environ=environ)
+                # Register the inverted right hemisphere to fsaverage_sym
+                cmd = [
+                    "surfreg",
+                    "--s",
+                    subject_id,
+                    "--t",
+                    "fsaverage_sym",
+                    "--lh",
+                    "--xhemi",
+                ]
+                exec_command(cmd, environ=environ)
+
+            # Convert selected surfaces in subject/surf to obj in output
+            if config.get("gear-convert_surfaces"):
+                log.info("Converting surfaces to object (.obj) files...")
+                surf_dir = f"{subjects_dir}/{subject_id}/surf"
+                surfaces = [
+                    "lh.pial",
+                    "rh.pial",
+                    "lh.white",
+                    "rh.white",
+                    "rh.inflated",
+                    "lh.inflated",
+                ]
+                for surf in surfaces:
+                    cmd = [
+                        "mris_convert",
+                        f"{surf_dir}/{surf}",
+                        f"{surf_dir}/{surf}.asc",
+                    ]
+                    exec_command(cmd, environ=environ)
+                    cmd = [
+                        f"{FLYWHEEL_BASE}/srf2obj",
+                        f"{SURF_DIR}/{surf}.asc",
+                        ">",
+                        f"{OUTPUT_DIR}/{surf}.obj",
+                    ]
+                    exec_command(cmd, environ=environ)
+
+            # Convert select volumes in subject/mri to nifti:
+            if config.get("gear-convert_volumes"):
+                log.info("Converting volumes to NIfTI files...")
+                mri_mgz_files = [
+                    "aparc+aseg.mgz",
+                    "aparc.a2009s+aseg.mgz",
+                    "brainmask.mgz",
+                    "lh.ribbon.mgz",
+                    "rh.ribbon.mgz",
+                    "ribbon.mgz",
+                    "aseg.mgz",
+                    "orig.mgz",
+                    "T1.mgz",
+                ]
+                if config.get("gear-hippocampal_subfields"):
+                    mri_mgz_files += [
+                        "$mri_mgz_files",
+                        "lh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
+                        "rh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
+                    ]
+                if config.get("gear-brainstem_structures"):
+                    mri_mgz_files += ["brainstemSsLabels.v10.FSvoxelSpace.mgz"]
+                for ff in mri_mgz_files:
+                    cmd = [
+                        "mri_convert",
+                        "-i",
+                        f"{mri_dir}/{ff}",
+                        "-o",
+                        f"{OUTPUT_DIR}/{ff.replace('.mgz','.nii.gz')}",
+                    ]
+                    exec_command(cmd, environ=environ)
+
+            # Write aseg stats to a table
+            if config.get("gear-convert_stats"):
+                log.info("Exporting stats files csv...")
+                cmd = [
+                    "asegstats2table",
+                    "-s",
+                    subject_id,
+                    "--delimiter",
+                    "comma",
+                    f"--tablefile={OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv",
+                ]
+                exec_command(cmd, environ=environ)
+
+                # Parse the aparc files and write to table
+                hemi = ["lh", "rh"]
+                parc = ["aparc.a2009s", "aparc"]
+                for hh in hemi:
+                    for pp in parc:
+                        cmd = [
+                            "aparcstats2table",
+                            "-s",
+                            subject_id,
+                            f"--hemi={hh}",
+                            f"--delimiter=comma",
+                            f"--parc={pp}",
+                            f"--tablefile={OUTPUT_DIR}/{subject_id}_{hh}_{pp}"
+                            + "_stats_area_mm2.csv",
+                        ]
+                        exec_command(cmd, environ=environ)
 
     except RuntimeError as exc:
         returncode = 1
@@ -343,12 +506,6 @@ def main(gtk_context):
 
         # Cleanup, move all results to the output directory
 
-        # TODO
-        # see https://github.com/bids-standard/pybids/tree/master/examples
-        # for any necessary work on the bids files inside the gear, perhaps
-        # to query results or count stuff to estimate how long things will take.
-        # Add that to utils/results.py
-
         # zip entire output/<analysis_id> folder into
         #  <gear_name>_<project|subject|session label>_<analysis.id>.zip
         zip_file_name = (
@@ -357,14 +514,11 @@ def main(gtk_context):
         )
         zip_output(
             str(gtk_context.output_dir),
-            gtk_context.destination["id"],
+            subject_id,
             zip_file_name,
             dry_run=False,
             exclude_files=None,
         )
-
-        # zip any .html files in output/<analysis_id>/
-        zip_htmls(gtk_context, output_analysisid_dir)
 
         # possibly save ALL intermediate output
         if gtk_context.config.get("gear-save-intermediate-output"):
@@ -374,11 +528,12 @@ def main(gtk_context):
         zip_intermediate_selected(gtk_context, run_label)
 
         # clean up: remove output that was zipped
+        output_analysisid_dir = gtk_context.output_dir / subject_id
         if Path(output_analysisid_dir).exists():
             if not gtk_context.config.get("gear-keep-output"):
 
                 log.debug('removing output directory "%s"', str(output_analysisid_dir))
-                shutil.rmtree(output_analysisid_dir)
+                output_analysisid_dir.unlink()
 
             else:
                 log.info(
