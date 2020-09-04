@@ -1,7 +1,5 @@
 """Unit test for despace"""
 
-import logging
-import os
 from pathlib import Path
 
 from utils.fly.despace import despace

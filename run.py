@@ -36,46 +36,170 @@ FREESURFER_HOME = "/usr/local/freesurfer"
 LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
 
-def do_gear_hippocampal_subfields(subject_id, mri_dir, environ, log):
+def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
 
-    log.info("Starting segmentation of hippicampal subfields...")
-    cmd = ["recon-all", "-subjid", subject_id, "-hippocampal-subfields-T1"]
-    exec_command(cmd, environ=environ)
-    cmd = [
-        "quantifyHippocampalSubfields.sh",
-        "T1",
-        f"{mri_dir}/HippocampalSubfields.txt",
-    ]
-    exec_command(cmd, environ=environ)
-    cmd = [
-        "tr",
-        " ",
-        "," "<",
-        f"{mri_dir}/HippocampalSubfields.txt",
-        ">",
-        f"{OUTPUT_DIR}/{subject_id}_HippocampalSubfields.csv",
-    ]
-    exec_command(cmd, environ=environ)
+    if True:
+        log.error("Sorry, segmentation of hippocampal subfields is not yet implemented")
+    else:
+        log.info("Starting segmentation of hippocampal subfields...")
+        cmd = ["recon-all", "-subjid", subject_id, "-hippocampal-subfields-T1"]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+        cmd = [
+            "quantifyHippocampalSubfields.sh",
+            "T1",
+            f"{mri_dir}/HippocampalSubfields.txt",
+        ]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+        cmd = [
+            "tr",
+            " ",
+            "," "<",
+            f"{mri_dir}/HippocampalSubfields.txt",
+            ">",
+            f"{OUTPUT_DIR}/{subject_id}_HippocampalSubfields.csv",
+        ]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
 
 
-def do_gear_brainstem_structures(mri_dir, subject_id, environ, log):
-    log.info("Starting segmentation of brainstem subfields...")
-    cmd = ["recon-all", "-subjid", subject_id, "-brainstem-structures"]
-    exec_command(cmd, environ=environ)
+def do_gear_brainstem_structures(mri_dir, subject_id, dry_run, environ, log):
+
+    if True:
+        log.error("Sorry, segmentation of brainstem is not yet implemented")
+    else:
+        log.info("Starting segmentation of brainstem subfields...")
+        cmd = ["recon-all", "-subjid", subject_id, "-brainstem-structures"]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+        cmd = [
+            "quantifyBrainstemStructures.sh",
+            f"{mri_dir}/BrainstemStructures.txt",
+        ]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+        cmd = [
+            "tr",
+            " ",
+            "," "<",
+            f"{mri_dir}/BrainstemStructures.txt",
+            ">",
+            f"{OUTPUT_DIR}/{subject_id}_BrainstemStructures.csv",
+        ]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+
+
+def do_gear_register_surfaces(subject_id, dry_run, environ, log):
+
+    log.info("Running surface registrations...")
+    # Register hemispheres
+    cmd = ["xhemireg", "--s", subject_id]
+    exec_command(cmd, environ=environ, dry_run=dry_run)
+    # Register the left hemisphere to fsaverage_sym
+    cmd = ["surfreg", "--s", subject_id, "--t", "fsaverage_sym", "--lh"]
+    exec_command(cmd, environ=environ, dry_run=dry_run)
+    # Register the inverted right hemisphere to fsaverage_sym
     cmd = [
-        "quantifyBrainstemStructures.sh",
-        f"{mri_dir}/BrainstemStructures.txt",
+        "surfreg",
+        "--s",
+        subject_id,
+        "--t",
+        "fsaverage_sym",
+        "--lh",
+        "--xhemi",
     ]
-    exec_command(cmd, environ=environ)
+    exec_command(cmd, environ=environ, dry_run=dry_run)
+
+
+def do_gear_convert_surfaces(subject_dir, subject_id, dry_run, environ, log):
+    """ Convert selected surfaces in subject/surf to obj in output."""
+
+    log.info("Converting surfaces to object (.obj) files...")
+    surf_dir = f"{subject_dir}/{subject_id}/surf"
+    surfaces = [
+        "lh.pial",
+        "rh.pial",
+        "lh.white",
+        "rh.white",
+        "rh.inflated",
+        "lh.inflated",
+    ]
+    for surf in surfaces:
+        cmd = [
+            "mris_convert",
+            f"{surf_dir}/{surf}",
+            f"{surf_dir}/{surf}.asc",
+        ]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+        cmd = [
+            f"{FLYWHEEL_BASE}/srf2obj",
+            f"{surf_dir}/{surf}.asc",
+            ">",
+            f"{OUTPUT_DIR}/{surf}.obj",
+        ]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+
+
+def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
+    """Convert select volumes in subject/mri to nifti."""
+
+    log.info("Converting volumes to NIfTI files...")
+    mri_mgz_files = [
+        "aparc+aseg.mgz",
+        "aparc.a2009s+aseg.mgz",
+        "brainmask.mgz",
+        "lh.ribbon.mgz",
+        "rh.ribbon.mgz",
+        "ribbon.mgz",
+        "aseg.mgz",
+        "orig.mgz",
+        "T1.mgz",
+    ]
+    if config.get("gear-hippocampal_subfields"):
+        mri_mgz_files += [
+            "$mri_mgz_files",
+            "lh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
+            "rh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
+        ]
+    if config.get("gear-brainstem_structures"):
+        mri_mgz_files += ["brainstemSsLabels.v10.FSvoxelSpace.mgz"]
+    for ff in mri_mgz_files:
+        cmd = [
+            "mri_convert",
+            "-i",
+            f"{mri_dir}/{ff}",
+            "-o",
+            f"{OUTPUT_DIR}/{ff.replace('.mgz', '.nii.gz')}",
+        ]
+        exec_command(cmd, environ=environ, dry_run=dry_run)
+
+
+def do_gear_convert_stats(subject_id, dry_run, environ, log):
+    """Write aseg stats to a table."""
+
+    log.info("Exporting stats files csv...")
     cmd = [
-        "tr",
-        " ",
-        "," "<",
-        f"{mri_dir}/BrainstemStructures.txt",
-        ">",
-        f"{OUTPUT_DIR}/{subject_id}_BrainstemStructures.csv",
+        "asegstats2table",
+        "-s",
+        subject_id,
+        "--delimiter",
+        "comma",
+        f"--tablefile={OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv",
     ]
-    exec_command(cmd, environ=environ)
+    exec_command(cmd, environ=environ, dry_run=dry_run)
+
+    # Parse the aparc files and write to table
+    hemi = ["lh", "rh"]
+    parc = ["aparc.a2009s", "aparc"]
+    for hh in hemi:
+        for pp in parc:
+            cmd = [
+                "aparcstats2table",
+                "-s",
+                subject_id,
+                f"--hemi={hh}",
+                f"--delimiter=comma",
+                f"--parc={pp}",
+                f"--tablefile={OUTPUT_DIR}/{subject_id}_{hh}_{pp}"
+                + "_stats_area_mm2.csv",
+            ]
+            exec_command(cmd, environ=environ, dry_run=dry_run)
 
 
 def main(gtk_context):
@@ -85,6 +209,7 @@ def main(gtk_context):
     log = gtk_context.log
 
     config = gtk_context.config
+    dry_run = config.get("gear-dry-run")
 
     anat_dir = INPUT_DIR / "anatomical"
     anat_dir_2 = INPUT_DIR / "t1w_anatomical_2"
@@ -99,8 +224,8 @@ def main(gtk_context):
     warnings = []
 
     # get # cpu's to set -openmp
-    os_cpu_count = str(os.cpu_count())
-    log.info("os.cpu_count() = %s", os_cpu_count)
+    os_cpu_count = os.cpu_count()
+    log.info("os.cpu_count() = %d", os_cpu_count)
     n_cpus = config.get("n_cpus")
     if n_cpus:
         del config["n_cpus"]
@@ -175,8 +300,8 @@ def main(gtk_context):
         existing_run = True
         unzip_archive(str(fs_archive), SUBJECTS_DIR)
         try:
-            zip = zipfile.ZipFile(fs_archive)
-            subject_id = zip.namelist()[0].split("/")[0]
+            zipit = zipfile.ZipFile(fs_archive)
+            subject_id = zipit.namelist()[0].split("/")[0]
             log.debug("subject_id 1 %s", subject_id)
         except:
             subject_id = ""
@@ -204,6 +329,7 @@ def main(gtk_context):
     # 2) BIDS formatted data
     if not existing_run and len(errors) == 0 and config.get("gear-bids"):
 
+        raise NotImplementedError("Running on BIDS formatted data will happen someday")
         # Given the destination container, figure out if running at the project,
         # subject, or session level.
         hierarchy = get_run_level_and_hierarchy(fw, gtk_context.destination["id"])
@@ -247,7 +373,7 @@ def main(gtk_context):
             tree_title=tree_title,
             src_data=src_data,
             folders=folders,
-            dry_run=gtk_context.config.get("gear-dry-run"),
+            dry_run=dry_run,
             do_validate_bids=gtk_context.config.get("gear-run-bids-validation"),
         )
         if error_code > 0 and not gtk_context.config.get("gear-ignore-bids-errors"):
@@ -306,7 +432,7 @@ def main(gtk_context):
 
         log.info("anatomical is '%s'", anatomical)
 
-        # Proccess additoinal anatomical inputs
+        # Process additional anatomical inputs
         add_inputs = ""
         for anat_dir in (anat_dir_2, anat_dir_3, anat_dir_4, anat_dir_5):
             if anat_dir.is_dir():
@@ -352,154 +478,54 @@ def main(gtk_context):
 
     log.info("command is: %s", str(command))
 
-    # Don't run if there were errors or if this is a dry run
-    ok_to_run = True
-
-    if len(errors) > 0:
-        ok_to_run = False
-        returncode = 1
-        log.info("Command was NOT run because of previous errors.")
-
-    if gtk_context.config.get("gear-dry-run"):
-        ok_to_run = False
-        returncode = 0
-        e = "gear-dry-run is set: Command was NOT run."
-        log.warning(e)
-        warnings.append(e)
-        pretend_it_ran(gtk_context)
+    return_code = 0
 
     try:
 
-        if ok_to_run:
+        if len(errors) > 0:
+            log.info("Command was NOT run because of previous errors.")
+            return_code = 1
 
-            returncode = 0
+        else:
 
-            # This is what it is all about
-            exec_command(command, environ=environ, shell=True)
+            if dry_run:
+                e = "gear-dry-run is set: Command was NOT run."
+                log.warning(e)
+                warnings.append(e)
+                pretend_it_ran(gtk_context)
+
+            else:
+                # This is what it is all about
+                exec_command(command, environ=environ, shell=True, cont_output=True)
 
             # Optional Segmentations
             mri_dir = f"{subject_dir}/{subject_id}/mri"
 
             if config.get("gear-hippocampal_subfields"):
-                do_gear_hippocampal_subfields(mri_dir, subject_id, environ)
+                do_gear_hippocampal_subfields(
+                    mri_dir, subject_id, dry_run, environ, log
+                )
 
             if config.get("gear-brainstem_structures"):
-                do_gear_brainstem_structures(mri_dir, subject_id, environ)
+                do_gear_brainstem_structures(mri_dir, subject_id, dry_run, environ, log)
 
             if config.get("gear-register_surfaces"):
-                log.info("Running surface registrations...")
-                # Register hemispheres
-                cmd = ["xhemireg", "--s", subject_id]
-                exec_command(cmd, environ=environ)
-                # Register the left hemisphere to fsaverage_sym
-                cmd = ["surfreg", "--s", subject_id, "--t", "fsaverage_sym", "--lh"]
-                exec_command(cmd, environ=environ)
-                # Register the inverted right hemisphere to fsaverage_sym
-                cmd = [
-                    "surfreg",
-                    "--s",
-                    subject_id,
-                    "--t",
-                    "fsaverage_sym",
-                    "--lh",
-                    "--xhemi",
-                ]
-                exec_command(cmd, environ=environ)
+                do_gear_register_surfaces(subject_id, dry_run, environ, log)
 
-            # Convert selected surfaces in subject/surf to obj in output
             if config.get("gear-convert_surfaces"):
-                log.info("Converting surfaces to object (.obj) files...")
-                surf_dir = f"{subject_dir}/{subject_id}/surf"
-                surfaces = [
-                    "lh.pial",
-                    "rh.pial",
-                    "lh.white",
-                    "rh.white",
-                    "rh.inflated",
-                    "lh.inflated",
-                ]
-                for surf in surfaces:
-                    cmd = [
-                        "mris_convert",
-                        f"{surf_dir}/{surf}",
-                        f"{surf_dir}/{surf}.asc",
-                    ]
-                    exec_command(cmd, environ=environ)
-                    cmd = [
-                        f"{FLYWHEEL_BASE}/srf2obj",
-                        f"{surf_dir}/{surf}.asc",
-                        ">",
-                        f"{OUTPUT_DIR}/{surf}.obj",
-                    ]
-                    exec_command(cmd, environ=environ)
+                do_gear_convert_surfaces(subject_dir, subject_id, dry_run, environ, log)
 
-            # Convert select volumes in subject/mri to nifti:
             if config.get("gear-convert_volumes"):
-                log.info("Converting volumes to NIfTI files...")
-                mri_mgz_files = [
-                    "aparc+aseg.mgz",
-                    "aparc.a2009s+aseg.mgz",
-                    "brainmask.mgz",
-                    "lh.ribbon.mgz",
-                    "rh.ribbon.mgz",
-                    "ribbon.mgz",
-                    "aseg.mgz",
-                    "orig.mgz",
-                    "T1.mgz",
-                ]
-                if config.get("gear-hippocampal_subfields"):
-                    mri_mgz_files += [
-                        "$mri_mgz_files",
-                        "lh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
-                        "rh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
-                    ]
-                if config.get("gear-brainstem_structures"):
-                    mri_mgz_files += ["brainstemSsLabels.v10.FSvoxelSpace.mgz"]
-                for ff in mri_mgz_files:
-                    cmd = [
-                        "mri_convert",
-                        "-i",
-                        f"{mri_dir}/{ff}",
-                        "-o",
-                        f"{OUTPUT_DIR}/{ff.replace('.mgz','.nii.gz')}",
-                    ]
-                    exec_command(cmd, environ=environ)
+                do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
-            # Write aseg stats to a table
             if config.get("gear-convert_stats"):
-                log.info("Exporting stats files csv...")
-                cmd = [
-                    "asegstats2table",
-                    "-s",
-                    subject_id,
-                    "--delimiter",
-                    "comma",
-                    f"--tablefile={OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv",
-                ]
-                exec_command(cmd, environ=environ)
-
-                # Parse the aparc files and write to table
-                hemi = ["lh", "rh"]
-                parc = ["aparc.a2009s", "aparc"]
-                for hh in hemi:
-                    for pp in parc:
-                        cmd = [
-                            "aparcstats2table",
-                            "-s",
-                            subject_id,
-                            f"--hemi={hh}",
-                            f"--delimiter=comma",
-                            f"--parc={pp}",
-                            f"--tablefile={OUTPUT_DIR}/{subject_id}_{hh}_{pp}"
-                            + "_stats_area_mm2.csv",
-                        ]
-                        exec_command(cmd, environ=environ)
+                do_gear_convert_stats(subject_id, dry_run, environ, log)
 
     except RuntimeError as exc:
-        returncode = 1
         errors.append(exc)
         log.critical(exc)
         log.exception("Unable to execute command.")
+        return_code = 1
 
     finally:
 
@@ -564,9 +590,10 @@ def main(gtk_context):
                     err_type = str(type(err)).split("'")[1]
                     msg += f"  {err_type}: {str(err)}\n"
             log.info(msg)
-            returncode = 1
 
-    return returncode
+        gtk_context.log.info("%s Gear is done.  Returning 0", CONTAINER)
+
+        sys.exit(return_code)
 
 
 if __name__ == "__main__":
@@ -580,8 +607,4 @@ if __name__ == "__main__":
         gtk_context.init_logging("debug")
     gtk_context.log_config()
 
-    exit_status = main(gtk_context)
-
-    gtk_context.log.info("%s Gear is done.  Returning %s", CONTAINER, exit_status)
-
-    sys.exit(exit_status)
+    main(gtk_context)

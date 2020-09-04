@@ -7,10 +7,10 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from pprint import pprint
 from unittest import TestCase
 
 import flywheel_gear_toolkit
+import pytest
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive
 
 import run
@@ -91,7 +91,7 @@ def search_caplog(caplog, find_me):
 
 
 def search_caplog_contains(caplog, find_me, contains_me):
-    """Search caplog message for find_me, return true if it contains contins_me"""
+    """Search caplog message for find_me, return true if it contains contains_me"""
 
     for msg in caplog.messages:
         if find_me in msg:
@@ -119,6 +119,29 @@ def print_captured(captured):
 ANATOMICAL_STR = "anatomical is '/flywheel/v0/input/anatomical/dicoms/1.2.826.0.1.3680043.8.498.81096423295716363709677774784503056177.MR.dcm'"
 
 
+def test_bids_works(caplog):
+
+    user_json = Path(Path.home() / ".config/flywheel/user.json")
+    if not user_json.exists():
+        TestCase.skipTest("", f"No API key available in {str(user_json)}")
+
+    caplog.set_level(logging.DEBUG)
+
+    install_gear("bids.zip")
+
+    with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
+
+        with pytest.raises(NotImplementedError) as excinfo:
+
+            run.main(gtk_context)
+
+            print_caplog(caplog)
+            print(excinfo)
+
+        assert excinfo.type == NotImplementedError
+        assert "someday" in str(excinfo.value)
+
+
 def test_dry_run_works(caplog):
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
@@ -131,10 +154,15 @@ def test_dry_run_works(caplog):
 
     with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
 
-        status = run.main(gtk_context)
+        with pytest.raises(SystemExit) as excinfo:
 
-        print_caplog(caplog)
+            run.main(gtk_context)
 
+            print_caplog(caplog)
+            print(excinfo)
+
+        assert excinfo.type == SystemExit
+        assert excinfo.value.code == 0
         assert search_caplog(caplog, "Zipping work directory")
         assert search_caplog(caplog, "file:   ./bids/dataset_description.jso")
         assert search_caplog(caplog, "folder: ./reportlets/somecmd/sub-TOME3024/anat")
@@ -142,7 +170,6 @@ def test_dry_run_works(caplog):
             caplog, "Could not find file 'anatsub-TOME3024_desc-about_T1w.html'"
         )
         assert search_caplog(caplog, "Warning: gear-dry-run is set")
-        assert status == 0
 
 
 def test_prev_works(caplog):
@@ -157,12 +184,18 @@ def test_prev_works(caplog):
 
     with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
 
-        status = run.main(gtk_context)
+        with pytest.raises(SystemExit) as excinfo:
 
+            run.main(gtk_context)
+
+            print_caplog(caplog)
+            print(excinfo)
+
+        assert excinfo.type == SystemExit
+        assert excinfo.value.code == 0
         assert search_caplog(caplog, "Warning: gear-dry-run is set")
         command = search_caplog(caplog, "command is:")
         assert command[34:56] == "'-subjid', 'TOME_3024'"
-        assert status == 0
 
 
 def test_nii2_works(caplog):
@@ -177,8 +210,15 @@ def test_nii2_works(caplog):
 
     with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
 
-        status = run.main(gtk_context)
+        with pytest.raises(SystemExit) as excinfo:
 
+            run.main(gtk_context)
+
+            print_caplog(caplog)
+            print(excinfo)
+
+        assert excinfo.type == SystemExit
+        assert excinfo.value.code == 0
         assert search_caplog(caplog, "Warning: gear-dry-run is set")
         command = search_caplog(caplog, "command is:")
         assert command[34:86] == "'-i', '/flywheel/v0/input/anatomical/T1w_MPR.nii.gz'"
@@ -187,7 +227,6 @@ def test_nii2_works(caplog):
             == "-i', '/flywheel/v0/input/t1w_anatomical_2/T1w_MPR.nii.gz'"
         )
         assert "-openmp" in command
-        assert status == 0
 
 
 def test_dcm_zip_works(caplog):
@@ -202,10 +241,15 @@ def test_dcm_zip_works(caplog):
 
     with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
 
-        status = run.main(gtk_context)
+        with pytest.raises(SystemExit) as excinfo:
 
-        print_caplog(caplog)
+            run.main(gtk_context)
 
+            print_caplog(caplog)
+            print(excinfo)
+
+        assert excinfo.type == SystemExit
+        assert excinfo.value.code == 0
         assert search_caplog(caplog, ANATOMICAL_STR)
         assert search_caplog(caplog, "Warning: gear-dry-run is set")
         command = search_caplog(caplog, "command is:")
@@ -214,7 +258,6 @@ def test_dcm_zip_works(caplog):
             == "['time', 'recon-all', '-i', '/flywheel/v0/input/anatomical/dicoms/"
         )
         assert "-openmp" in command
-        assert status == 0
 
 
 def test_wet_run_works(caplog):
@@ -232,13 +275,17 @@ def test_wet_run_works(caplog):
 
     with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
 
-        status = run.main(gtk_context)
+        with pytest.raises(SystemExit) as excinfo:
 
-        print_caplog(caplog)
+            run.main(gtk_context)
 
+            print_caplog(caplog)
+            print(excinfo)
+
+        assert excinfo.type == SystemExit
+        assert excinfo.value.code == 1
         assert search_caplog(
             caplog,
             "Zipping output file freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip",
         )
         assert search_caplog(caplog, "ERROR: All entries are zero!")
-        assert status == 1

@@ -2,8 +2,6 @@
 
 import json
 import logging
-from os import chdir
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import flywheel

@@ -14,7 +14,7 @@ This file will by copied into the $FSHOME directory.  There are [three ways](htt
 to provide the license to this gear.  A license is required for this gear to run.
 
 # Configuration Options
-Note: arguments that start with "gear-" are not passed to the BIDS App.
+Note: arguments that start with "gear-" are not passed to the recon-all.
 
 ### n_cpus (optional)
 Number of CPUs/cores use.  The default is all available.
