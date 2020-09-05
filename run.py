@@ -107,11 +107,11 @@ def do_gear_register_surfaces(subject_id, dry_run, environ, log):
     exec_command(cmd, environ=environ, dry_run=dry_run)
 
 
-def do_gear_convert_surfaces(subject_dir, subject_id, dry_run, environ, log):
+def do_gear_convert_surfaces(subject_dir, dry_run, environ, log):
     """ Convert selected surfaces in subject/surf to obj in output."""
 
     log.info("Converting surfaces to object (.obj) files...")
-    surf_dir = f"{subject_dir}/{subject_id}/surf"
+    surf_dir = f"{subject_dir}/surf"
     surfaces = [
         "lh.pial",
         "rh.pial",
@@ -278,7 +278,6 @@ def main(gtk_context):
     run_label = subject_id  # used in output file names
 
     subject_dir = Path(SUBJECTS_DIR / subject_id)
-    # subject_dir.mkdir()
     work_dir = Path(gtk_context.output_dir / subject_id)
     if not work_dir.is_symlink():
         work_dir.symlink_to(subject_dir)
@@ -499,7 +498,7 @@ def main(gtk_context):
                 exec_command(command, environ=environ, shell=True, cont_output=True)
 
             # Optional Segmentations
-            mri_dir = f"{subject_dir}/{subject_id}/mri"
+            mri_dir = f"{subject_dir}/mri"
 
             if config.get("gear-hippocampal_subfields"):
                 do_gear_hippocampal_subfields(
@@ -510,16 +509,20 @@ def main(gtk_context):
                 do_gear_brainstem_structures(mri_dir, subject_id, dry_run, environ, log)
 
             if config.get("gear-register_surfaces"):
-                do_gear_register_surfaces(subject_id, dry_run, environ, log)
+                log.error("Sorry, gear-register_surfaces not yet implemented")
+                # do_gear_register_surfaces(subject_id, dry_run, environ, log)
 
             if config.get("gear-convert_surfaces"):
-                do_gear_convert_surfaces(subject_dir, subject_id, dry_run, environ, log)
+                log.error("Sorry, gear-convert_surfaces not yet implemented")
+                # do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
 
             if config.get("gear-convert_volumes"):
-                do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
+                log.error("Sorry, gear-convert_volumes not yet implemented")
+                # do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
             if config.get("gear-convert_stats"):
-                do_gear_convert_stats(subject_id, dry_run, environ, log)
+                log.error("Sorry, gear-convert_statsnot yet implemented")
+                # do_gear_convert_stats(subject_id, dry_run, environ, log)
 
     except RuntimeError as exc:
         errors.append(exc)
