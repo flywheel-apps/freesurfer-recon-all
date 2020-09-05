@@ -448,8 +448,8 @@ def main(gtk_context):
             despace(t2_dir)
             anatomical_list = [f for f in t2_dir.rglob("*.nii*") if f.is_file()]
             if len(anatomical_list) > 0:
-                log.info("Adding %s to the processing stream...", anatomical_list[0])
-                add_inputs += f"-i {str(anatomical_list[0])} "
+                log.info("Adding T2 %s to the processing stream...", anatomical_list[0])
+                add_inputs += f"-T2 {str(anatomical_list[0])} "
 
         add_inputs = add_inputs[:-1]  # so split below won't add extra empty string
 
