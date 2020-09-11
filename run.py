@@ -154,8 +154,8 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
     ]
     if config.get("gear-hippocampal_subfields"):
         mri_mgz_files += [
-            "lh.hippoAmygLabels-T1.v21.FSvoxelSpace.mgz"
-            "rh.hippoAmygLabels-T1.v21.FSvoxelSpace.mgz"
+            "lh.hippoAmygLabels-T1.v21.FSvoxelSpace.mgz",
+            "rh.hippoAmygLabels-T1.v21.FSvoxelSpace.mgz",
         ]
     if config.get("gear-brainstem_structures"):
         mri_mgz_files += ["brainstemSsLabels.v2.FSvoxelSpace.mgz"]
