@@ -5,13 +5,16 @@ LABEL maintainer="support@flywheel.io"
 RUN (curl -sL https://rpm.nodesource.com/setup_12.x | bash -) \
   && yum clean all -y \
   && yum update -y \
-  && yum install -y zip nodejs tree \
+  && yum install -y zip unzip nodejs tree libXt libXext ncurses-compat-libs \
   && yum clean all -y \
   && npm install npm --global
 
 RUN npm install -g bids-validator@1.5.4
 
 RUN source $FREESURFER_HOME/SetUpFreeSurfer.sh
+
+# extra segmentations require matlab compiled runtime
+RUN fs_install_mcr R2014b
 
 # Save docker environ
 ENV PYTHONUNBUFFERED 1

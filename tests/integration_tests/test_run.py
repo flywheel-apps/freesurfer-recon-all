@@ -15,6 +15,11 @@ from flywheel_gear_toolkit.utils.zip_tools import unzip_archive
 
 import run
 
+log = logging.getLogger(__name__)
+
+fs_dir = Path("/usr/local/freesurfer/")
+subjects_dir = Path(fs_dir / "subjects")
+
 
 def install_gear(zip_name):
     """unarchive initial gear to simulate running inside a real gear.
@@ -34,13 +39,27 @@ def install_gear(zip_name):
     if Path(gear + "config.json").exists():
         Path(gear + "config.json").unlink()
 
-    for dir_name in ["input", "output", "work"]:
+    for dir_name in ["input", "output", "work", "freesurfer"]:
         path = Path(gear + dir_name)
         if path.exists():
             shutil.rmtree(path)
 
     print(f'\ninstalling new gear, "{zip_name}"...')
     unzip_archive(gear_tests + zip_name, gear)
+
+    # move freesurfer license and subject directories to proper place
+    gear_freesurfer = Path("freesurfer")
+    if gear_freesurfer.exists():
+        gear_license = Path(gear_freesurfer / "license.txt")
+        if gear_license.exists():
+            shutil.move(str(gear_license), str(fs_dir))
+        subjects = gear_freesurfer.glob("subjects/*")
+        for subj in subjects:
+            subj_name = subj.name
+            if (subjects_dir / subj_name).exists():
+                shutil.rmtree(subjects_dir / subj_name)
+            print(f"moveing subject to {str(subjects_dir / subj_name)}")
+            shutil.move(str(subj), str(subjects_dir))
 
     # swap in user's api-key if there is one (fake) in the config
     config_json = Path("./config.json")
@@ -117,6 +136,43 @@ def print_captured(captured):
 #
 
 ANATOMICAL_STR = "anatomical is '/flywheel/v0/input/anatomical/dicoms/1.2.826.0.1.3680043.8.498.81096423295716363709677774784503056177.MR.dcm'"
+
+
+def test_brainstem_works(caplog):
+
+    caplog.set_level(logging.DEBUG)
+
+    install_gear("hippo.zip")
+
+    mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
+
+    with open("/tmp/gear_environ.json", "r") as f:
+        environ = json.load(f)
+
+    run.do_gear_brainstem_structures("sub-TOME3024", mri_dir, False, environ, log)
+
+    print_caplog(caplog)
+
+    assert 0
+
+
+def test_hippo_works(caplog):
+
+    caplog.set_level(logging.DEBUG)
+
+    install_gear("hippo.zip")
+
+    mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
+
+    with open("/tmp/gear_environ.json", "r") as f:
+        environ = json.load(f)
+
+    # This takes 20 minutes!
+    run.do_gear_hippocampal_subfields("sub-TOME3024", mri_dir, False, environ, log)
+
+    print_caplog(caplog)
+
+    assert 0
 
 
 def test_bids_fails(caplog):

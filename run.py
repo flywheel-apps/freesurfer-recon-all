@@ -38,51 +38,50 @@ LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
 def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
 
-    if True:
-        log.error("Sorry, segmentation of hippocampal subfields is not yet implemented")
-    else:
-        log.info("Starting segmentation of hippocampal subfields...")
-        cmd = ["recon-all", "-subjid", subject_id, "-hippocampal-subfields-T1"]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
-        cmd = [
-            "quantifyHippocampalSubfields.sh",
-            "T1",
-            f"{mri_dir}/HippocampalSubfields.txt",
-        ]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
+    log.info("Starting segmentation of hippocampal subfields...")
+    cmd = ["segmentHA_T1.sh", subject_id]
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+    txt_files = [
+        "lh.hippoSfVolumes-T1.v21.txt",
+        "rh.hippoSfVolumes-T1.v21.txt",
+        "lh.amygNucVolumes-T1.v21.txt",
+        "rh.amygNucVolumes-T1.v21.txt",
+    ]
+    for tf in txt_files:
         cmd = [
             "tr",
-            " ",
-            "," "<",
-            f"{mri_dir}/HippocampalSubfields.txt",
+            "' '",
+            ",",
+            "<",
+            f"{mri_dir}/{tf}",
             ">",
-            f"{OUTPUT_DIR}/{subject_id}_HippocampalSubfields.csv",
+            f"{OUTPUT_DIR}/{subject_id}_{tf.replace('.txt','.csv')}",
         ]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
+        exec_command(
+            cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True
+        )
 
 
-def do_gear_brainstem_structures(mri_dir, subject_id, dry_run, environ, log):
+def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
 
-    if True:
-        log.error("Sorry, segmentation of brainstem is not yet implemented")
-    else:
-        log.info("Starting segmentation of brainstem subfields...")
-        cmd = ["recon-all", "-subjid", subject_id, "-brainstem-structures"]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
-        cmd = [
-            "quantifyBrainstemStructures.sh",
-            f"{mri_dir}/BrainstemStructures.txt",
-        ]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
-        cmd = [
-            "tr",
-            " ",
-            "," "<",
-            f"{mri_dir}/BrainstemStructures.txt",
-            ">",
-            f"{OUTPUT_DIR}/{subject_id}_BrainstemStructures.csv",
-        ]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
+    log.info("Starting segmentation of brainstem subfields...")
+    cmd = ["segmentBS.sh", subject_id]
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+    cmd = [
+        "quantifyBrainstemStructures.sh",
+        f"{mri_dir}/brainstemSsVolumes.v2.txt",
+    ]
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+    cmd = [
+        "tr",
+        "' '",
+        ",",
+        "<",
+        f"{mri_dir}/brainstemSsVolumes.v2.txt",
+        ">",
+        f"{OUTPUT_DIR}/{subject_id}_brainstemSsVolumes.v2.csv",
+    ]
+    exec_command(cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True)
 
 
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
@@ -90,10 +89,10 @@ def do_gear_register_surfaces(subject_id, dry_run, environ, log):
     log.info("Running surface registrations...")
     # Register hemispheres
     cmd = ["xhemireg", "--s", subject_id]
-    exec_command(cmd, environ=environ, dry_run=dry_run)
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
     # Register the left hemisphere to fsaverage_sym
     cmd = ["surfreg", "--s", subject_id, "--t", "fsaverage_sym", "--lh"]
-    exec_command(cmd, environ=environ, dry_run=dry_run)
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
     # Register the inverted right hemisphere to fsaverage_sym
     cmd = [
         "surfreg",
@@ -104,7 +103,7 @@ def do_gear_register_surfaces(subject_id, dry_run, environ, log):
         "--lh",
         "--xhemi",
     ]
-    exec_command(cmd, environ=environ, dry_run=dry_run)
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
 def do_gear_convert_surfaces(subject_dir, dry_run, environ, log):
@@ -126,14 +125,16 @@ def do_gear_convert_surfaces(subject_dir, dry_run, environ, log):
             f"{surf_dir}/{surf}",
             f"{surf_dir}/{surf}.asc",
         ]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
+        exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
         cmd = [
-            f"{FLYWHEEL_BASE}/srf2obj",
+            f"{FLYWHEEL_BASE}/utils/srf2obj",
             f"{surf_dir}/{surf}.asc",
             ">",
             f"{OUTPUT_DIR}/{surf}.obj",
         ]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
+        exec_command(
+            cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True
+        )
 
 
 def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
@@ -153,12 +154,11 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
     ]
     if config.get("gear-hippocampal_subfields"):
         mri_mgz_files += [
-            "$mri_mgz_files",
-            "lh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
-            "rh.hippoSfLabels-T1.v10.FSvoxelSpace.mgz",
+            "lh.hippoAmygLabels-T1.v21.FSvoxelSpace.mgz"
+            "rh.hippoAmygLabels-T1.v21.FSvoxelSpace.mgz"
         ]
     if config.get("gear-brainstem_structures"):
-        mri_mgz_files += ["brainstemSsLabels.v10.FSvoxelSpace.mgz"]
+        mri_mgz_files += ["brainstemSsLabels.v2.FSvoxelSpace.mgz"]
     for ff in mri_mgz_files:
         cmd = [
             "mri_convert",
@@ -167,7 +167,7 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
             "-o",
             f"{OUTPUT_DIR}/{ff.replace('.mgz', '.nii.gz')}",
         ]
-        exec_command(cmd, environ=environ, dry_run=dry_run)
+        exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
 def do_gear_convert_stats(subject_id, dry_run, environ, log):
@@ -182,7 +182,7 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
         "comma",
         f"--tablefile={OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv",
     ]
-    exec_command(cmd, environ=environ, dry_run=dry_run)
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
     # Parse the aparc files and write to table
     hemi = ["lh", "rh"]
@@ -199,7 +199,7 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
                 f"--tablefile={OUTPUT_DIR}/{subject_id}_{hh}_{pp}"
                 + "_stats_area_mm2.csv",
             ]
-            exec_command(cmd, environ=environ, dry_run=dry_run)
+            exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
 def main(gtk_context):
@@ -502,23 +502,20 @@ def main(gtk_context):
 
             if config.get("gear-hippocampal_subfields"):
                 do_gear_hippocampal_subfields(
-                    mri_dir, subject_id, dry_run, environ, log
+                    subject_id, mri_dir, dry_run, environ, log
                 )
 
             if config.get("gear-brainstem_structures"):
-                do_gear_brainstem_structures(mri_dir, subject_id, dry_run, environ, log)
+                do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log)
 
             if config.get("gear-register_surfaces"):
-                log.error("Sorry, gear-register_surfaces not yet implemented")
-                # do_gear_register_surfaces(subject_id, dry_run, environ, log)
+                do_gear_register_surfaces(subject_id, dry_run, environ, log)
 
             if config.get("gear-convert_surfaces"):
-                log.error("Sorry, gear-convert_surfaces not yet implemented")
-                # do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
+                do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
 
             if config.get("gear-convert_volumes"):
-                log.error("Sorry, gear-convert_volumes not yet implemented")
-                # do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
+                do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
             if config.get("gear-convert_stats"):
                 log.error("Sorry, gear-convert_statsnot yet implemented")
