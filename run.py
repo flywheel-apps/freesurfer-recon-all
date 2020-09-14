@@ -186,7 +186,7 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
 
     # Parse the aparc files and write to table
     hemi = ["lh", "rh"]
-    parc = ["aparc.a2009s", "aparc"]
+    parc = ["aparc.a2009s", "aparc", "aparc.DKTatlas", "aparc.pial"]
     for hh in hemi:
         for pp in parc:
             cmd = [
@@ -544,13 +544,6 @@ def main(gtk_context):
             dry_run=False,
             exclude_files=None,
         )
-
-        # possibly save ALL intermediate output
-        if gtk_context.config.get("gear-save-intermediate-output"):
-            zip_all_intermediate_output(gtk_context, run_label)
-
-        # possibly save intermediate files and folders
-        zip_intermediate_selected(gtk_context, run_label)
 
         # clean up: remove output that was zipped
         output_analysisid_dir = gtk_context.output_dir / subject_id

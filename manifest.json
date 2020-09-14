@@ -169,21 +169,6 @@
       "description": "Gear will run BIDS validation after downloading data.  If validation fails and gear-abort-on-bids-error is true, recon-all will NOT be run.",
       "type": "boolean"
     },
-    "gear-save-intermediate-output": {
-      "default": false,
-      "description": "Gear will save ALL intermediate output into *_work_*.zip",
-      "type": "boolean"
-    },
-    "gear-intermediate-files": {
-      "description": "Space separated list of FILES to retain from the intermediate work directory into *_work_selected_*.zip.",
-      "default": "",
-      "type": "string"
-    },
-    "gear-intermediate-folders": {
-      "description": "Space separated list of FOLDERS to retain from the intermediate work directory into *_work_selected_*.zip.",
-      "default": "",
-      "type": "string"
-    },
     "gear-dry-run": {
       "default": false,
       "description": "Do everything except actually executing recon-all",
@@ -208,6 +193,6 @@
   "maintainer": "Flywheel <support@flywheel.io>",
   "cite": "For citation information, please visit: https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferMethodsCitation.",
   "license": "Other",
-  "source": "https://github.com/scitran-apps/freesurfer-recon-all",
+  "source": "https://github.com/flywheel-apps/freesurfer-recon-all",
   "url": "https://surfer.nmr.mgh.harvard.edu"
 }
