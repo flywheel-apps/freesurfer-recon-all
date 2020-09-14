@@ -2,12 +2,12 @@
   "name": "freesurfer-recon-all",
   "label": "FreeSurfer 7.1.1: run recon-all",
   "description": "FreeSurfer version 7.1.1 Release (July 27, 2020). This gear takes an anatomical NIfTI file and performs all of the FreeSurfer cortical reconstruction process. Outputs are provided in a zip file and include the entire output directory tree from Recon-All. Configuration options exist for setting the subject ID and for converting outputs to NIfTI, OBJ, and CSV. FreeSurfer is a software package for the analysis and visualization of structural and functional neuroimaging data from cross-sectional or longitudinal studies. It is developed by the Laboratory for Computational Neuroimaging at the Athinoula A. Martinos Center for Biomedical Imaging. Please see https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense for license information.",
-  "version": "0.0.11_7.1.1",
+  "version": "0.0.12_7.1.1",
   "custom": {
-    "docker-image": "flywheel/freesurfer-recon-all:0.0.11_7.1.1",
+    "docker-image": "flywheel/freesurfer-recon-all:0.0.12_7.1.1",
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/freesurfer-recon-all:0.0.11_7.1.1"
+      "image": "flywheel/freesurfer-recon-all:0.0.12_7.1.1"
     },
     "flywheel": {
       "suite": "FreeSurfer"
@@ -84,11 +84,6 @@
       "description": "FreeSurfer license file, provided during registration with FreeSurfer. This file will by copied to the $FSHOME directory and used during execution of the Gear.",
       "base": "file",
       "optional": true
-    },
-    "bidsignore": {
-      "description": "A .bidsignore file to provide to the bids-validator that this gear runs before running recon-all.",
-      "base": "file",
-      "optional": true
     }
   },
   "config": {
@@ -143,16 +138,6 @@
       "default": true,
       "type": "boolean"
     },
-    "gear-bids": {
-      "default": false,
-      "description": "THIS IS NOT YET IMPLEMENTED.  Download and run on BIDS formatted data.  This can be done instead of specifying input files.",
-      "type": "boolean"
-    },
-    "gear-ignore-bids-errors": {
-      "default": false,
-      "description": "By default, the gear will not run if there are any BIDS errors detected.  Set this to run even if BIDS errors are detected",
-      "type": "boolean"
-    },
     "gear-log-level": {
       "default": "INFO",
       "description": "Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)",
@@ -163,11 +148,6 @@
         "INFO",
         "DEBUG"
       ]
-    },
-    "gear-run-bids-validation": {
-      "default": false,
-      "description": "Gear will run BIDS validation after downloading data.  If validation fails and gear-abort-on-bids-error is true, recon-all will NOT be run.",
-      "type": "boolean"
     },
     "gear-dry-run": {
       "default": false,

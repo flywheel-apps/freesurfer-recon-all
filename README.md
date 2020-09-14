@@ -3,8 +3,6 @@ Gear that runs FreeSurfer [v7.1.1 Release (July 27, 2020)](https://surfer.nmr.mg
 
 To run this gear you need to select structural MRI file(s) as inputs and set configuration parameters.  Minimally, the "anatomical" input file and a Freesurfer license need to be provided.
 
-Note: in this initial release of this gear, only basic recon-all functionaity has been implemented.
-
 # Inputs
 
 ![Inputs](README_img/inputs.png)
@@ -12,13 +10,6 @@ Note: in this initial release of this gear, only basic recon-all functionaity ha
 ### anatomical (required)
 
 Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive. NOTE: A freesurfer-recon-all Gear output can be used provided the filename is preserved from its initial output (e.g., freesurfer-recon-all_<subject_code>*.zip)
-
-### bidsignore (optional)
-
-Note: this gear will eventually be able to run on BIDS formatted data.  This is not yet implemented.
-
-A list of patterns (like .gitignore syntax) defining files that should be ignored by the
-bids validator.
 
 ### freesurfer_license (optional)
 A license is required for this gear to run but it does not have to be provided as an input file.
@@ -36,24 +27,19 @@ T2 or FLAIR data to improve pial surfaces.  This can be NIfTI or DICOM.  The `-T
 # Configuration Options
 Note: arguments that start with "gear-" are not passed to recon-all.  They control pre- or pos-processing operations.
 
-### gear-bids (optional)
-This is not yet implemented.  This gear will be able to run on BIDS formatted data.
-
 ### gear-brainstem_structures (optional)
-This has not yet been implemented.
-
 
 Generate an automated segmentation of four different brainstem structures from the input T1 scan: medulla oblongata, pons, midbrain and superior cerebellar peduncle (SCP).
 
 ### gear-convert_stats (optional)
-This has not yet been implemented.
-
 
 Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical stats file created by recon-all and/or mri_segstats (eg, aseg.stats) into a table in which each line is a subject and each column is a segmentation. The values are the volume of the segmentation in mm3 or the mean intensity over the structure. Also Converts a cortical stats file created by recon-all and or mris_anatomical_stats (eg, ?h.aparc.stats) into a table in which each line is a subject and each column is a parcellation. By default, the values are the area of the parcellation in mm2.
 
-### gear-convert_volumes (optional)
-This has not yet been implemented.
+### gear-convert_surfaces (optional)
 
+Convert selected surfaces in subject/surf to obj in output.
+
+### gear-convert_volumes (optional)
 
 Convert selected FreeSurfer volume files (mgz) to NIfTI format. (Default=true)
 
@@ -65,50 +51,19 @@ Text from license file generated during FreeSurfer registration.
 Copy the contents of the license file and paste it into this argument.
 
 #### gear-hippocampal_subfields (optional)
-Not yet implemented.
-
 
 Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. Choosing this option will write <subject_id>_HippocampalSubfields.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfields for more info. (Default=true)
-
-### gear-ignore-bids-errors (optional)
-Gear argument: Run BIDS App even if BIDS errors are detected when gear runs bids-validator.
-
-### gear-intermediate-files (optional)
-Not yet implemented.
-
-
-A space separated list of FILES to retain from the intermediate work
-directory.  Files are saved into "<BIDS App>_work_selected_<run label>_<analysis id>.zip"
-
-### gear-intermediate-folders (optional)
-Not yet implemented.
-
-
-A space separated list of FOLDERS to retain from the intermediate work
-directory.  Files are saved into "<BIDS App>_work_selected_<run label>_<analysis id>.zip"
 
 ### gear-keep-output (optional)
 Don't delete output.  Output is always zipped into a single file for
 easy download.  Choose this option to prevent output deletion after zipping.  A single zip file is usually more appropriate.
 
 ### gear-log-level (optional)
-Gear argument: Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)
+Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)
 
 ### gear-register_surfaces (optional)
-Not yet implemented.
 
 Runs the xhemireg and surfreg scripts on your subject after having run recon-all in order to register the subject's left and inverted-right hemispheres to the fsaverage_sym subject. (The fsaverage_sym subject is a version of the fsaverage subject with a single the left-right symmetric pseudo-hemisphere.) (Default=true).
-
-### gear-run-bids-validation (optional)
-Gear argument: Run bids-validator after downloading BIDS formatted data.  Default is true.
-
-### gear-save-intermediate-output (optional)
-Not yet implemented.
-
-
-Gear argument: The BIDS App is run in a "work/" directory.  Setting this will save ALL
-contents of that directory including downloaded BIDS data.  The file will be named
-"<BIDS App>_work_<run label>_<analysis id>.zip"
 
 ### n_cpus (optional)
 Number of CPUs/cores use.  The default is 1.
