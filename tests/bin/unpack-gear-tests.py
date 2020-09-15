@@ -53,7 +53,7 @@ def main():
             print(f'"{test}" --> "{name}"')
 
         if Path(name).exists():
-            print(f"{name} already exsts, not unzipping.")
+            print(f"{name} already exists, not unzipping.")
         else:
             print(f"Unzipping {name}.")
             zip_file = ZipFile(test, "r")

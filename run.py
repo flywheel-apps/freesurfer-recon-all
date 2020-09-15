@@ -3,7 +3,6 @@
 
 import json
 import os
-import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -13,15 +12,9 @@ from flywheel_gear_toolkit.interfaces.command_line import exec_command
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
 
-from utils.bids.download_run_level import download_bids_for_runlevel
-from utils.bids.run_level import get_run_level_and_hierarchy
 from utils.dry_run import pretend_it_ran
 from utils.fly.despace import despace
 from utils.fly.make_file_name_safe import make_file_name_safe
-from utils.results.zip_intermediate import (
-    zip_all_intermediate_output,
-    zip_intermediate_selected,
-)
 
 GEAR = "freesurfer-recon-all"
 REPO = "flywheel-apps"
@@ -263,9 +256,6 @@ def main(gtk_context):
     # The main command line command to be run:
     command = ["time", "recon-all"]
 
-    # This is also used as part of the name of output files
-    command_name = make_file_name_safe(command[1])
-
     if Path(LICENSE_FILE).exists():
         log.debug("%s exists.", LICENSE_FILE)
     install_freesurfer_license(gtk_context, LICENSE_FILE)
@@ -282,10 +272,9 @@ def main(gtk_context):
     if not work_dir.is_symlink():
         work_dir.symlink_to(subject_dir)
 
-    # recon-all can be run in one of three ways:
+    # recon-all can be run in two ways:
     # 1) re-running a previous run (if .zip file is provided)
-    # 2) on BIDS formatted data determined by the run level (project, subject, session)
-    # 3) by providing anatomical files as input to the gear
+    # 2) by providing anatomical files as input to the gear
 
     # 1) Check for previous freesurfer run
     find = [f for f in anat_dir.rglob("freesurfer-recon-all*.zip")]
@@ -325,68 +314,7 @@ def main(gtk_context):
         command.append(subject_id)
         run_label = subject_id  # used in output file names
 
-    # 2) BIDS formatted data
-    if not existing_run and len(errors) == 0 and config.get("gear-bids"):
-
-        raise NotImplementedError("Running on BIDS formatted data will happen someday")
-        # Given the destination container, figure out if running at the project,
-        # subject, or session level.
-        hierarchy = get_run_level_and_hierarchy(fw, gtk_context.destination["id"])
-
-        # This is the label of the project, subject or session and is used
-        # as part of the name of the output files.  It might be a session or
-        # project label depending on the run-level.
-        run_label = make_file_name_safe(hierarchy["run_label"])
-
-        # Output will be put into a directory named as the destination id.
-        # This allows the raw output to be deleted so that a zipped archive
-        # can be returned.
-        output_analysisid_dir = gtk_context.output_dir / subject_id
-
-        # Create output directory
-        log.info("Creating output directory %s", output_analysisid_dir)
-        Path(output_analysisid_dir).mkdir()
-
-        # 3 positional args: bids path, output dir, 'participant'
-        # This should be done here in case there are nargs='*' arguments
-        # These follow the BIDS Apps definition (https://github.com/BIDS-Apps)
-        command.append(str(gtk_context.work_dir / "bids"))
-        command.append(str(output_analysisid_dir))
-        command.append("participant")
-
-        # Create HTML file that shows BIDS "Tree" like output?
-        tree = True
-        tree_title = f"{command_name} BIDS Tree"
-
-        # Whether or not to include src data (e.g. dicoms) when downloading BIDS
-        src_data = False
-
-        # Limit download to specific folders? e.g. ['anat','func','fmap']
-        # when downloading BIDS
-        folders = []  # empty list is no limit
-
-        error_code = download_bids_for_runlevel(
-            gtk_context,
-            hierarchy,
-            tree=tree,
-            tree_title=tree_title,
-            src_data=src_data,
-            folders=folders,
-            dry_run=dry_run,
-            do_validate_bids=gtk_context.config.get("gear-run-bids-validation"),
-        )
-        if error_code > 0 and not gtk_context.config.get("gear-ignore-bids-errors"):
-            errors.append(f"BIDS Error(s) detected.  Did not run {CONTAINER}")
-
-        # now that work/bids/ exists, copy in the ignore file
-        bidsignore_path = gtk_context.get_input_path("bidsignore")
-        if bidsignore_path:
-            shutil.copy(bidsignore_path, "work/bids/.bidsignore")
-            log.info("Installed .bidsignore in work/bids/")
-        existing_run = True
-        log.critical("BIDS IS NOT YET IMPLEMENTED")
-
-    # 3) provide anatomical files as input to the gear
+    # 2) provide anatomical files as input to the gear
     if not existing_run and len(errors) == 0:
         # Check for input files: anatomical NIfTI or DICOM archive
         despace(anat_dir)

@@ -25,10 +25,10 @@
 #
 
 
+import json
 import os
 import sys
-import json
-import stat
+
 import flywheel_gear_toolkit
 
 
@@ -45,11 +45,11 @@ def build_local_test(job, test_path_root):
     output_dir = os.path.join(test_path, "output")
 
     if not os.path.isdir(input_dir):
-        print("Creating directory: %s" % (input_dir))
+        print("Creating directory: %s" % input_dir)
         os.makedirs(input_dir)
 
     if not os.path.isdir(output_dir):
-        print("Creating directory: %s" % (output_dir))
+        print("Creating directory: %s" % output_dir)
         os.mkdir(output_dir)
 
     # Write the config file

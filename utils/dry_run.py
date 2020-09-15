@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 def pretend_it_ran(context):
     """Make some output like the command would have done only fake."""
 
-    # Work diredtory
+    # Work directory
     path = "work/"
 
     log.info("Creating fake output in " + path)
@@ -31,7 +31,7 @@ def pretend_it_ran(context):
             os.makedirs(dir_name)
             Path(ff).touch(mode=0o777, exist_ok=True)
 
-    # Output diredtory
+    # Output directory
     path = "output/" + context.destination["id"] + "/"
 
     log.info("Creating fake output in " + path)
