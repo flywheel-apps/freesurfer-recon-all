@@ -334,3 +334,5 @@ def test_wet_run_fails(caplog):
             caplog,
             "Zipping output file freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip",
         )
+        # Make sure subject was kept
+        assert Path("/flywheel/v0/output/TOME_3024/scripts/recon-all.error").exists()

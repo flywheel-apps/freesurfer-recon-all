@@ -25,7 +25,7 @@ Additional anatomical NIfTI files.  These will be averaged together to provide f
 T2 or FLAIR data to improve pial surfaces.  This can be NIfTI or DICOM.  The `-T2pial` or `-FLAIRpial` flags will need to be added in the `reconall_options` configuration parameter (see below).
 
 # Configuration Options
-Note: arguments that start with "gear-" are not passed to recon-all.  They control pre- or pos-processing operations.
+Note: arguments that start with "gear-" are not passed to recon-all.  They control pre- or post-processing operations.
 
 ### gear-brainstem_structures (optional)
 
@@ -44,7 +44,7 @@ Convert selected surfaces in subject/surf to obj in output.
 Convert selected FreeSurfer volume files (mgz) to NIfTI format. (Default=true)
 
 ### gear-dry-run (optional)
-Do everything except actually executing recon-all.  This useful for debugging.
+Do everything except actually execute recon-all.  This useful for debugging.
 
 ### gear-FREESURFER_LICENSE (optional)
 Text from license file generated during FreeSurfer registration.
@@ -54,9 +54,8 @@ Copy the contents of the license file and paste it into this argument.
 
 Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. Choosing this option will write <subject_id>_HippocampalSubfields.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfields for more info. (Default=true)
 
-### gear-keep-output (optional)
-Don't delete output.  Output is always zipped into a single file for
-easy download.  Choose this option to prevent output deletion after zipping.  A single zip file is usually more appropriate.
+### gear-all-output (optional)
+All output is always zipped into a single file for easy download.  Choose this option so every file in the Freesurfer subject directory will be available as output on the platform.  That will be a lot of clutter.  You probably don't want to select this option.
 
 ### gear-log-level (optional)
 Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)

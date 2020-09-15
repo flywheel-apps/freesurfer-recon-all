@@ -265,12 +265,6 @@ def main(gtk_context):
         subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
         subject = fw.get(subject_id)
         subject_id = subject.label
-    run_label = subject_id  # used in output file names
-
-    subject_dir = Path(SUBJECTS_DIR / subject_id)
-    work_dir = Path(gtk_context.output_dir / subject_id)
-    if not work_dir.is_symlink():
-        work_dir.symlink_to(subject_dir)
 
     # recon-all can be run in two ways:
     # 1) re-running a previous run (if .zip file is provided)
@@ -312,7 +306,6 @@ def main(gtk_context):
         # recon-all -subjid "${SUBJECT_ID}" ${RECON_ALL_OPTS}
         command.append("-subjid")
         command.append(subject_id)
-        run_label = subject_id  # used in output file names
 
     # 2) provide anatomical files as input to the gear
     if not existing_run and len(errors) == 0:
@@ -388,6 +381,11 @@ def main(gtk_context):
         command.append("-subjid")
         command.append(subject_id)
 
+    subject_dir = Path(SUBJECTS_DIR / subject_id)
+    work_dir = Path(gtk_context.output_dir / subject_id)
+    if not work_dir.is_symlink():
+        work_dir.symlink_to(subject_dir)
+
     if "subject_id" in command_config:  # this was already handled
         command_config.pop("subject_id")
 
@@ -459,11 +457,11 @@ def main(gtk_context):
 
         # Cleanup, move all results to the output directory
 
-        # zip entire output/<analysis_id> folder into
-        #  <gear_name>_<project|subject|session label>_<analysis.id>.zip
+        # zip entire output/<subject_id> folder into
+        #  <gear_name>_<subject_id>_<analysis.id>.zip
         zip_file_name = (
             gtk_context.manifest["name"]
-            + f"_{run_label}_{gtk_context.destination['id']}.zip"
+            + f"_{subject_id}_{gtk_context.destination['id']}.zip"
         )
         zip_output(
             str(gtk_context.output_dir),
@@ -476,7 +474,7 @@ def main(gtk_context):
         # clean up: remove output that was zipped
         output_analysisid_dir = gtk_context.output_dir / subject_id
         if Path(output_analysisid_dir).exists():
-            if not gtk_context.config.get("gear-keep-output"):
+            if not gtk_context.config.get("gear-all-output"):
 
                 log.debug('removing output directory "%s"', str(output_analysisid_dir))
                 output_analysisid_dir.unlink()
