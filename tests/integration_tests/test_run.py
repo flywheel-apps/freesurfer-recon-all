@@ -130,8 +130,6 @@ def test_convert_stats_works(caplog):
 
 def test_convert_volumes_works(caplog):
 
-    # TestCase.skipTest("", f"Test data is too big to commit.")
-
     caplog.set_level(logging.DEBUG)
 
     install_gear("convert.zip")

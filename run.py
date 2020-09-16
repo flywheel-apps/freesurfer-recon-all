@@ -444,8 +444,7 @@ def main(gtk_context):
                 do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
             if config.get("gear-convert_stats"):
-                log.error("Sorry, gear-convert_statsnot yet implemented")
-                # do_gear_convert_stats(subject_id, dry_run, environ, log)
+                do_gear_convert_stats(subject_id, dry_run, environ, log)
 
     except RuntimeError as exc:
         errors.append(exc)
