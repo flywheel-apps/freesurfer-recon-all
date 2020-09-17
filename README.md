@@ -54,9 +54,6 @@ Copy the contents of the license file and paste it into this argument.
 
 Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. Choosing this option will write <subject_id>_HippocampalSubfields.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfields for more info. (Default=true)
 
-### gear-all-output (optional)
-All output is always zipped into a single file for easy download.  Choose this option so every file in the Freesurfer subject directory will be available as output on the platform.  That will be a lot of clutter.  You probably don't want to select this option.
-
 ### gear-log-level (optional)
 Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)
 

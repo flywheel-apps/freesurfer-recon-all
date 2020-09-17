@@ -154,11 +154,6 @@
       "description": "Do everything except actually executing recon-all",
       "type": "boolean"
     },
-    "gear-all-output": {
-      "default": false,
-      "description": "Output is always zipped into a single file for easy download.  Choose this option to also make all individual files available on the platform. There will be a lot of files.",
-      "type": "boolean"
-    },
     "gear-FREESURFER_LICENSE": {
       "description": "Text from license file generated during FreeSurfer registration. *Entries should be space separated*",
       "type": "string",
