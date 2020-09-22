@@ -46,7 +46,7 @@ Convert selected surfaces in subject/surf to obj in output.
 Convert selected FreeSurfer volume files (mgz) to NIfTI format. (Default=true)
 
 ### gear-dry-run (optional)
-Do everything except actually execute recon-all.  This useful for debugging.
+Do everything except actually execute recon-all.  This is useful for debugging.
 
 ### gear-FREESURFER_LICENSE (optional)
 Text from license file generated during FreeSurfer registration.
