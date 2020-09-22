@@ -454,7 +454,7 @@ def main(gtk_context):
     subject_id = config.get("subject_id")
     if not subject_id:
         subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
-        subject = fw.get(subject_id)
+        subject = fw.get_subject(subject_id)
         subject_id = subject.label
     log.debug("subject_id %s", subject_id)
 
@@ -535,7 +535,7 @@ def main(gtk_context):
         # clean up: remove output that was zipped
         output_analysisid_dir = gtk_context.output_dir / subject_id
         if Path(output_analysisid_dir).exists():
-            if not gtk_context.config.get("gear-all-output"):
+            if not config.get("gear-all-output"):
 
                 log.debug('removing output directory "%s"', str(output_analysisid_dir))
                 output_analysisid_dir.unlink()
