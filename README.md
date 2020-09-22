@@ -3,6 +3,8 @@ Gear that runs FreeSurfer [v7.1.1 Release (July 27, 2020)](https://surfer.nmr.mg
 
 To run this gear you need to select structural MRI file(s) as inputs and set configuration parameters.  Minimally, the "anatomical" input file and a Freesurfer license need to be provided.
 
+Note: the current version of Freesurfer has an known issue with using the `-parallel` flag.  Contrary to what is said below, the default is to run with the flag off.
+
 # Inputs
 
 ![Inputs](README_img/inputs.png)
@@ -62,7 +64,7 @@ Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)
 Runs the xhemireg and surfreg scripts on your subject after having run recon-all in order to register the subject's left and inverted-right hemispheres to the fsaverage_sym subject. (The fsaverage_sym subject is a version of the fsaverage subject with a single the left-right symmetric pseudo-hemisphere.) (Default=true).
 
 ### n_cpus (optional)
-Number of CPUs/cores use.  The default is 1.
+Number of CPUs/cores use.  The default is to use all available cores.
 
 ### parallel (optional)
 

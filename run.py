@@ -29,6 +29,220 @@ FREESURFER_HOME = "/usr/local/freesurfer"
 LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
 
+def set_core_count(config, log):
+    """get # cpu's to set -openmp by setting config["openmp"]
+
+    Args:
+        config (GearToolkitContext().config): config dictionary from config.json
+        log (GearToolkitContext().log): logger set up by Gear Toolkit
+    """
+
+    os_cpu_count = os.cpu_count()
+    log.info("os.cpu_count() = %d", os_cpu_count)
+    n_cpus = config.get("n_cpus")
+    if n_cpus:
+        del config["n_cpus"]
+        if n_cpus > os_cpu_count:
+            log.warning("n_cpus > number available, using %d", os_cpu_count)
+            config["openmp"] = os_cpu_count
+        elif n_cpus == 0:
+            log.info("n_cpus == 0, using %d (maximum available)", os_cpu_count)
+            config["openmp"] = os_cpu_count
+    else:  # Default is to use all cpus available
+        config["openmp"] = os_cpu_count  # zoom zoom
+
+
+def check_for_previous_run(log):
+    """Check for .zip file that contains subject from a previous run.
+
+    Args:
+        log (GearToolkitContext().log): logger set up by Gear Toolkit
+
+    Returns:
+        new_subject_id (str)
+    """
+
+    new_subject_id = ""  # assume not going to find zip file
+
+    anat_dir = INPUT_DIR / "anatomical"
+    find = list(anat_dir.rglob("freesurfer-recon-all*.zip"))
+    if len(find) > 0:
+        if len(find) > 1:
+            log.warning("Found %d previous freesurfer runs. Using first", len(find))
+        fs_archive = find[0]
+        unzip_archive(str(fs_archive), SUBJECTS_DIR)
+        try:
+            zipit = zipfile.ZipFile(fs_archive)
+            new_subject_id = zipit.namelist()[0].split("/")[0]
+            log.debug("new_subject_id %s", new_subject_id)
+        except:
+            new_subject_id = ""
+
+        if new_subject_id != "":
+            new_subject_id = make_file_name_safe(new_subject_id)
+            if not Path(SUBJECTS_DIR / new_subject_id).exists():
+                log.critical("No SUBJECT DIR could be found! Cannot continue. Exiting")
+                sys.exit(1)
+            log.info(
+                "recon-all running from previous run...(recon-all -subjid %s)",
+                new_subject_id,
+            )
+
+    return new_subject_id
+
+
+def get_input_files(log):
+    """Provide required anatomical file as input to the gear.
+
+    Input file can be either a NIfTI file or a DICOM archive.
+
+    Args:
+        log (GearToolkitContext().log): logger set up by Gear Toolkit
+
+    Returns:
+        anatomical (str): path to anatomical file
+    """
+
+    anat_dir = INPUT_DIR / "anatomical"
+    despace(anat_dir)
+
+    anatomical_list = list(anat_dir.rglob("*.nii*"))
+    if len(anatomical_list) == 1:
+        anatomical = str(anatomical_list[0])
+
+    elif len(anatomical_list) == 0:
+        # assume a directory of DICOM files was provided
+        # find all regular files that are not hidden and are not in a hidden
+        # directory.  Like this bash command:
+        # ANATOMICAL=$(find $INPUT_DIR/* -not -path '*/\.*' -type f | head -1)
+        anatomical_list = [
+            f for f in INPUT_DIR.rglob("[!.]*") if "/." not in str(f) and f.is_file()
+        ]
+
+        if len(anatomical_list) == 0:
+            log.critical(
+                "Anatomical input could not be found in %s! Exiting (1)", str(anat_dir),
+            )
+            os.system(f"ls -lRa {str(anat_dir)}")
+            sys.exit(1)
+
+        anatomical = str(anatomical_list[0])
+        if anatomical.endswith(".zip"):
+            dicom_dir = anat_dir / "dicoms"
+            dicom_dir.mkdir()
+            unzip_archive(anatomical, dicom_dir)
+            despace(dicom_dir)
+            anatomical_list = [
+                f
+                for f in dicom_dir.rglob("[!.]*")
+                if "/." not in str(f) and f.is_file()
+            ]
+            anatomical = str(anatomical_list[0])
+
+    else:
+        log.warning("What?  Found %s NIfTI files!", len(anatomical_list))
+        anatomical = str(anatomical_list[0])
+
+    log.info("anatomical is '%s'", anatomical)
+
+    return anatomical
+
+
+def get_additional_inputs(log):
+    """Process additional anatomical inputs.
+
+    Additional T1 and T2 input files must all be NIfTI (.nii or .nii.gz)
+
+    Args:
+        log (GearToolkitContext().log): logger set up by Gear Toolkit
+
+    Returns:
+        add_inputs (str): arguments to pass in for additional input files
+    """
+
+    add_inputs = ""
+
+    # additional T1 input files
+    anat_dir_2 = INPUT_DIR / "t1w_anatomical_2"
+    anat_dir_3 = INPUT_DIR / "t1w_anatomical_3"
+    anat_dir_4 = INPUT_DIR / "t1w_anatomical_4"
+    anat_dir_5 = INPUT_DIR / "t1w_anatomical_5"
+    for anat_dir in (anat_dir_2, anat_dir_3, anat_dir_4, anat_dir_5):
+        if anat_dir.is_dir():
+            despace(anat_dir)
+            anatomical_list = [f for f in anat_dir.rglob("*.nii*") if f.is_file()]
+            if len(anatomical_list) > 0:
+                log.info("Adding %s to the processing stream...", anatomical_list[0])
+                add_inputs += f"-i {str(anatomical_list[0])} "
+
+    # T2 input file
+    t2_dir = INPUT_DIR / "t2w_anatomical"
+    if t2_dir.is_dir():
+        despace(t2_dir)
+        anatomical_list = [f for f in t2_dir.rglob("*.nii*") if f.is_file()]
+        if len(anatomical_list) > 0:
+            log.info("Adding T2 %s to the processing stream...", anatomical_list[0])
+            add_inputs += f"-T2 {str(anatomical_list[0])} "
+
+    add_inputs = add_inputs.rstrip()  # so split below won't add extra empty string
+
+    return add_inputs
+
+
+def generate_command(subject_id, command_config, log):
+    """Compose the shell command to run recon-all.
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        command_config (dict): configuration parameters and values to pass in
+        log (GearToolkitContext().log): logger set up by Gear Toolkit
+
+    Returns:
+        command (list of str): the command line to be run
+    """
+    # The main command line command to be run:
+    command = ["time", "recon-all"]
+
+    # recon-all can be run in two ways:
+    # 1) re-running a previous run (if .zip file is provided)
+    # 2) by providing anatomical files as input to the gear
+
+    new_subject_id = check_for_previous_run(log)
+    if new_subject_id:
+        subject_id = new_subject_id
+        command.append("-subjid")
+        command.append(subject_id)
+
+    else:
+        anatomical = get_input_files(log)
+        command.append("-i")
+        command.append(anatomical)
+        add_inputs = get_additional_inputs(log)
+        if add_inputs:
+            command += add_inputs.split(" ")
+        command.append("-subjid")
+        command.append(subject_id)
+
+    if "subject_id" in command_config:  # this was already handled
+        command_config.pop("subject_id")
+
+    # add configuration parameters to the command
+    for key, val in command_config.items():
+        # print(f"key:{key} val:{val} type:{type(val)}")
+        if key == "reconall_options":
+            command += val.split(" ")
+        elif isinstance(val, bool):
+            if val:
+                command.append(f"-{key}")
+        else:
+            command.append(f"-{key}")
+            command.append(f"{val}")
+
+    log.info("command is: %s", str(command))
+
+    return command
+
+
 def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
 
     log.info("Starting segmentation of hippocampal subfields...")
@@ -204,32 +418,12 @@ def main(gtk_context):
     config = gtk_context.config
     dry_run = config.get("gear-dry-run")
 
-    anat_dir = INPUT_DIR / "anatomical"
-    anat_dir_2 = INPUT_DIR / "t1w_anatomical_2"
-    anat_dir_3 = INPUT_DIR / "t1w_anatomical_3"
-    anat_dir_4 = INPUT_DIR / "t1w_anatomical_4"
-    anat_dir_5 = INPUT_DIR / "t1w_anatomical_5"
-    t2_dir = INPUT_DIR / "t2w_anatomical"
-
     # Keep a list of errors and warning to print all in one place at end of log
     # Any errors will prevent the command from running and will cause exit(1)
     errors = []
     warnings = []
 
-    # get # cpu's to set -openmp
-    os_cpu_count = os.cpu_count()
-    log.info("os.cpu_count() = %d", os_cpu_count)
-    n_cpus = config.get("n_cpus")
-    if n_cpus:
-        del config["n_cpus"]
-        if n_cpus > os_cpu_count:
-            log.warning("n_cpus > number available, using %d", os_cpu_count)
-            config["openmp"] = os_cpu_count
-        elif n_cpus == 0:
-            log.info("n_cpus == 0, using %d (maximum available)", os_cpu_count)
-            config["openmp"] = os_cpu_count
-    else:  # Default is to use all cpus available
-        config["openmp"] = os_cpu_count  # zoom zoom
+    set_core_count(config, log)
 
     # grab environment for gear (saved in Dockerfile)
     with open("/tmp/gear_environ.json", "r") as f:
@@ -246,15 +440,12 @@ def main(gtk_context):
     for key, val in config.items():
         if not key.startswith("gear-"):
             command_config[key] = val
-    print("command_config:", json.dumps(command_config, indent=4))
+    # print("command_config:", json.dumps(command_config, indent=4))
 
     # Validate the command parameter dictionary - make sure everything is
     # ready to run so errors will appear before launching the actual gear
     # code.  Add descriptions of problems to errors & warnings lists.
     # print("gtk_context.config:", json.dumps(gtk_context.config, indent=4))
-
-    # The main command line command to be run:
-    command = ["time", "recon-all"]
 
     if Path(LICENSE_FILE).exists():
         log.debug("%s exists.", LICENSE_FILE)
@@ -265,143 +456,14 @@ def main(gtk_context):
         subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
         subject = fw.get(subject_id)
         subject_id = subject.label
-
-    # recon-all can be run in two ways:
-    # 1) re-running a previous run (if .zip file is provided)
-    # 2) by providing anatomical files as input to the gear
-
-    # 1) Check for previous freesurfer run
-    find = [f for f in anat_dir.rglob("freesurfer-recon-all*.zip")]
-    if len(find) == 0:
-        existing_run = False
-    else:
-        log.debug("subject_id 0 %s", subject_id)
-        if len(find) > 1:
-            log.warning("Found %d previous freesurfer runs. Using first", len(find))
-        fs_archive = find[0]
-        existing_run = True
-        unzip_archive(str(fs_archive), SUBJECTS_DIR)
-        try:
-            zipit = zipfile.ZipFile(fs_archive)
-            subject_id = zipit.namelist()[0].split("/")[0]
-            log.debug("subject_id 1 %s", subject_id)
-        except:
-            subject_id = ""
-        if subject_id == "":
-            if config.get("subject_id"):
-                subject_id = config["config"]["subject_id"]
-                log.debug("subject_id 2 %s", subject_id)
-        else:
-            subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
-            subject = fw.get_subject(subject_id)
-            subject_id = subject.label
-            log.debug("subject_id 3 %s", subject_id)
-        subject_id = make_file_name_safe(subject_id)
-        if not Path(SUBJECTS_DIR / subject_id).exists():
-            log.critical("No SUBJECT DIR could be found! Cannot continue. Exiting")
-            sys.exit(1)
-        log.info(
-            "recon-all running from previous run...(recon-all -subjid %s)", subject_id,
-        )
-        # recon-all -subjid "${SUBJECT_ID}" ${RECON_ALL_OPTS}
-        command.append("-subjid")
-        command.append(subject_id)
-
-    # 2) provide anatomical files as input to the gear
-    if not existing_run and len(errors) == 0:
-        # Check for input files: anatomical NIfTI or DICOM archive
-        despace(anat_dir)
-        anatomical_list = [f for f in anat_dir.rglob("*.nii*")]
-        if len(anatomical_list) == 1:
-            anatomical = str(anatomical_list[0])
-
-        elif len(anatomical_list) == 0:
-            # assume a directory of DICOM files was provided
-            # find all regular files that are not hidden and are not in a hidden
-            # directory.  Like this bash command:
-            # ANATOMICAL=$(find $INPUT_DIR/* -not -path '*/\.*' -type f | head -1)
-            anatomical_list = [
-                f
-                for f in INPUT_DIR.rglob("[!.]*")
-                if "/." not in str(f) and f.is_file()
-            ]
-
-            if len(anatomical_list) == 0:
-                log.critical(
-                    "Anatomical input could not be found in %s! Exiting (1)",
-                    str(anat_dir),
-                )
-                os.system(f"ls -lRa {str(anat_dir)}")
-                sys.exit(1)
-
-            anatomical = str(anatomical_list[0])
-            if anatomical.endswith(".zip"):
-                dicom_dir = anat_dir / "dicoms"
-                dicom_dir.mkdir()
-                unzip_archive(anatomical, dicom_dir)
-                despace(dicom_dir)
-                anatomical_list = [
-                    f
-                    for f in dicom_dir.rglob("[!.]*")
-                    if "/." not in str(f) and f.is_file()
-                ]
-                anatomical = str(anatomical_list[0])
-
-        else:
-            log.warning("What?  Found %s NIfTI files!", len(anatomical_list))
-
-        log.info("anatomical is '%s'", anatomical)
-
-        # Process additional anatomical inputs
-        add_inputs = ""
-        for anat_dir in (anat_dir_2, anat_dir_3, anat_dir_4, anat_dir_5):
-            if anat_dir.is_dir():
-                despace(anat_dir)
-                anatomical_list = [f for f in anat_dir.rglob("*.nii*") if f.is_file()]
-                if len(anatomical_list) > 0:
-                    log.info(
-                        "Adding %s to the processing stream...", anatomical_list[0]
-                    )
-                    add_inputs += f"-i {str(anatomical_list[0])} "
-
-        # T2 input file
-        if t2_dir.is_dir():
-            despace(t2_dir)
-            anatomical_list = [f for f in t2_dir.rglob("*.nii*") if f.is_file()]
-            if len(anatomical_list) > 0:
-                log.info("Adding T2 %s to the processing stream...", anatomical_list[0])
-                add_inputs += f"-T2 {str(anatomical_list[0])} "
-
-        add_inputs = add_inputs[:-1]  # so split below won't add extra empty string
-
-        command.append("-i")
-        command.append(anatomical)
-        if add_inputs:
-            command += [ww for ww in add_inputs.split(" ")]
-        command.append("-subjid")
-        command.append(subject_id)
+    log.debug("subject_id %s", subject_id)
 
     subject_dir = Path(SUBJECTS_DIR / subject_id)
     work_dir = Path(gtk_context.output_dir / subject_id)
     if not work_dir.is_symlink():
         work_dir.symlink_to(subject_dir)
 
-    if "subject_id" in command_config:  # this was already handled
-        command_config.pop("subject_id")
-
-    # add configuration parameters to the command
-    for key, val in command_config.items():
-        # print(f"key:{key} val:{val} type:{type(val)}")
-        if key == "reconall_options":
-            command += [ww for ww in val.split(" ")]
-        elif isinstance(val, bool):
-            if val:
-                command.append(f"-{key}")
-        else:
-            command.append(f"-{key}")
-            command.append(f"{val}")
-
-    log.info("command is: %s", str(command))
+    command = generate_command(subject_id, command_config, log)
 
     return_code = 0
 
@@ -516,13 +578,6 @@ def main(gtk_context):
 
 if __name__ == "__main__":
 
-    gtk_context = flywheel_gear_toolkit.GearToolkitContext()
+    gear_toolkit_context = flywheel_gear_toolkit.GearToolkitContext()
 
-    # Setup basic logging and log the configuration for this job
-    if gtk_context.config["gear-log-level"] == "INFO":
-        gtk_context.init_logging("info")
-    else:
-        gtk_context.init_logging("debug")
-    gtk_context.log_config()
-
-    main(gtk_context)
+    main(gear_toolkit_context)
