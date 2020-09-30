@@ -1,0 +1,144 @@
+version: 2.1
+
+orbs:
+  jq: circleci/jq@1.9.0
+
+# Storing a few handy aliases
+aliases:
+  - &setup-docker-image-name
+    name: Setup docker image name
+    command: |
+      VER=$(cat manifest.json | jq -r '.version')
+      DOCKER_IMAGE_NAME=$(cat manifest.json | jq '.custom."gear-builder".image')
+      echo 'export VER='${VER}  >> $BASH_ENV
+      echo 'export DOCKER_IMAGE_NAME='${DOCKER_IMAGE_NAME} >> $BASH_ENV
+      echo 'export DOCKER_CACHE_NAME=cache-'${DOCKER_IMAGE_NAME} >> $BASH_ENV
+
+  - &load-docker-image-layer-cache
+    name: Load Docker image layer cache
+    no_output_timeout: 60m
+    command: |
+      docker info
+      set +o pipefail
+      if [ -f /tmp/cache/docker.tar.gz ]; then
+        sudo apt update && sudo apt -y install pigz
+        pigz -d --stdout /tmp/cache/docker.tar.gz | docker load;
+      fi
+      docker images
+
+  - &build-docker-image
+    name: Build docker image
+    no_output_timeout: 60m
+    command: |
+      docker build -t ${DOCKER_IMAGE_NAME} -f Dockerfile \
+      --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+      --build-arg VCS_REF=`git rev-parse --short HEAD` \
+      --build-arg VERSION="${CIRCLE_TAG}" \
+      --cache-from=${DOCKER_IMAGE_NAME} .
+
+  - &load-docker-image
+    name: Load docker image
+    no_output_timeout: 60m
+    command: |
+      docker info
+      set +o pipefail
+      if [ -f /tmp/cache/docker.tar.gz ]; then
+        sudo apt update && sudo apt -y install pigz
+        pigz -d --stdout /tmp/cache/docker.tar.gz | docker load
+        docker images
+      fi
+
+  - &restore-cache
+    keys:
+      - docker-v1-{{ .Branch }}-{{ epoch }}
+      - docker-v1-{{ .Branch }}-
+      - docker-v1-master-
+      - docker-v1-
+    paths:
+      - /tmp/cache/docker.tar.gz
+
+  - &save-cache
+    key: docker-v1-{{ .Branch }}-{{ epoch }}
+    paths:
+      - /tmp/cache/docker.tar.gz
+
+  - &create-volume-for-remote-mount
+    name: Create volume for mounting to remote docker
+    command: |
+      # create a dummy container which will hold a volume with config
+      docker run -it -d --mount 'type=volume,src=source,dst=/flywheel/v0' --name source-vol alpine /bin/sh
+      # copy a repo files into this volume
+      docker cp . source-vol:/flywheel/v0
+      # change ownership to flyhweel (ID:1000) user
+      docker exec -it source-vol chown -R 1000:100 /flywheel/v0
+      docker exec -it source-vol ls -l /flywheel/v0
+
+
+jobs:
+
+  build:
+    environment:
+      LANG: en_US.UTF-8
+    docker:
+      - image: circleci/python:3.7.3
+    steps:
+      - checkout
+      - run: *setup-docker-image-name
+      - setup_remote_docker
+      - restore_cache: *restore-cache
+      - run: *load-docker-image-layer-cache
+      - run: *build-docker-image
+      - run:
+          name: Save Docker image layer cache
+          command: |
+            mkdir -p /tmp/cache
+            sudo apt update && sudo apt -y install pigz
+            docker save ${DOCKER_IMAGE_NAME} | pigz -2 -p 3 > /tmp/cache/docker.tar.gz
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - cache/docker.tar.gz
+      - save_cache: *save-cache
+
+  test:
+    environment:
+      LANG: en_US.UTF-8
+    docker:
+      - image: circleci/python:3.7.3
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - checkout
+      - run: *setup-docker-image-name
+      - setup_remote_docker
+      - run: *load-docker-image
+      - run: *create-volume-for-remote-mount
+      - run:
+          name: Test
+          command: |
+            docker run -it --volumes-from source-vol --name test ${DOCKER_IMAGE_NAME} \
+              bash -c "pip install --user --no-warn-script-location -r tests/requirements.txt && PATH=/home/flywheel/.local/bin:$PATH && python -m pytest --junitxml=test-reports/junit.xml"
+            docker cp test:/flywheel/v0/htmlcov .
+            docker cp test:/flywheel/v0/test-reports .
+      - store_test_results:
+          path: test-reports
+      - store_artifacts:
+          path: test-reports
+      - store_artifacts:
+          path: htmlcov
+          prefix: coverage
+
+
+workflows:
+  build-test-deploy:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/

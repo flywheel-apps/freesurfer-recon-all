@@ -1,0 +1,32 @@
+name-template: '$NEXT_PATCH_VERSION'
+tag-template: '$NEXT_PATCH_VERSION'
+categories:
+  - title: 'Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+      - 'enh'
+  - title: 'Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: 'Documentation'
+    labels:
+      - 'doc'
+      - 'documentation'
+  - title: 'Maintenance'
+    labels:
+      - 'chore'
+      - 'maintenance'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+template: |
+  _[ADD SUMMARY OF WHAT CHANGED]_
+
+  # What's Changed
+
+  $CHANGES
+
+  # Impact On Gear Output
+
+  _[LIST HOW STRUCTURE AND/OR VALUES OF GEAR OUTPUTS (e.g. FILES AND METADATA) ARE IMPACTED]_
