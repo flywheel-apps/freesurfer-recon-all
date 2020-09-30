@@ -3,7 +3,7 @@ Gear that runs FreeSurfer [v7.1.1 Release (July 27, 2020)](https://surfer.nmr.mg
 
 To run this gear you need to select structural MRI file(s) as inputs and set configuration parameters.  Minimally, the "anatomical" input file and a Freesurfer license need to be provided.
 
-Note: the current version of Freesurfer has an known issue with using the `-parallel` flag.  Contrary to what is said below, the default is to run with the flag off.
+Note: the current version of Freesurfer has an known issue with using the `-parallel` flag.  Recon-all will fail stochastically.  Contrary to what is said below, the default is to run with the flag off.
 
 # Inputs
 
@@ -68,7 +68,7 @@ Number of CPUs/cores use.  The default is to use all available cores.
 
 ### parallel (optional)
 
-Command line option to run recon-all in parallel. (Default=False). By default, it instructs the binaries to use 4 processors (cores), meaning, 4 threads will run in parallel in some operations. Adjust n_cpus for more (or less) than 4 cores.
+Command line option to run recon-all in parallel. (Default=False). By default, it instructs the binaries to use 4 processors (cores), meaning, 4 threads will run in parallel in some operations. Adjust n_cpus for more (or less) than 4 cores.  NOTE: this option causes the gear to fail stocastically, that is why the default is False.
 
 ### reconall_options (required)
 

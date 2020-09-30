@@ -33,7 +33,7 @@ def test_despace_works(capsys, tmp_path):
 
     despace(tmp_path / DIRS[0])
 
-    found = [f for f in Path(tmp_path / DIRS[0]).rglob("*")]
+    found = list(Path(tmp_path / DIRS[0]).rglob("*"))
     # for ff in found:
     #    print(ff)
 

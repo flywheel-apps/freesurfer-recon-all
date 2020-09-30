@@ -16,9 +16,13 @@ RUN source $FREESURFER_HOME/SetUpFreeSurfer.sh
 # extra segmentations require matlab compiled runtime
 RUN fs_install_mcr R2014b
 
-# Save docker environ
+# Save environment so it can be passed in when running recon-all.
 ENV PYTHONUNBUFFERED 1
 RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
+
+# Install a version of python to run Flywheel code and keep it separate from the
+# python that Freesurfer uses.  Saving the environment above makes sure it is not
+# changed in the Flyfwheel environment.
 
 # Set CPATH for packages relying on compiled libs (e.g. indexed_gzip)
 ENV PATH="/root/miniconda3/bin:$PATH" \
@@ -26,7 +30,6 @@ ENV PATH="/root/miniconda3/bin:$PATH" \
     LANG="C.UTF-8" \
     PYTHONNOUSERSITE=1
 
-# Get a new version of python that can run flywheel
 RUN wget \
     https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-Linux-x86_64.sh \
     && mkdir /root/.conda \

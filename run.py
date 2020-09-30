@@ -33,8 +33,8 @@ def set_core_count(config, log):
     """get # cpu's to set -openmp by setting config["openmp"]
 
     Args:
-        config (GearToolkitContext().config): config dictionary from config.json
-        log (GearToolkitContext().log): logger set up by Gear Toolkit
+        config (GearToolkitContext.config): config dictionary from config.json
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
     """
 
     os_cpu_count = os.cpu_count()
@@ -56,7 +56,7 @@ def check_for_previous_run(log):
     """Check for .zip file that contains subject from a previous run.
 
     Args:
-        log (GearToolkitContext().log): logger set up by Gear Toolkit
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         new_subject_id (str)
@@ -91,13 +91,13 @@ def check_for_previous_run(log):
     return new_subject_id
 
 
-def get_input_files(log):
+def get_input_file(log):
     """Provide required anatomical file as input to the gear.
 
     Input file can be either a NIfTI file or a DICOM archive.
 
     Args:
-        log (GearToolkitContext().log): logger set up by Gear Toolkit
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         anatomical (str): path to anatomical file
@@ -154,7 +154,7 @@ def get_additional_inputs(log):
     Additional T1 and T2 input files must all be NIfTI (.nii or .nii.gz)
 
     Args:
-        log (GearToolkitContext().log): logger set up by Gear Toolkit
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         add_inputs (str): arguments to pass in for additional input files
@@ -195,7 +195,7 @@ def generate_command(subject_id, command_config, log):
     Args:
         subject_id (str): Freesurfer subject directory name
         command_config (dict): configuration parameters and values to pass in
-        log (GearToolkitContext().log): logger set up by Gear Toolkit
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         command (list of str): the command line to be run
@@ -214,7 +214,7 @@ def generate_command(subject_id, command_config, log):
         command.append(subject_id)
 
     else:
-        anatomical = get_input_files(log)
+        anatomical = get_input_file(log)
         command.append("-i")
         command.append(anatomical)
         add_inputs = get_additional_inputs(log)
@@ -244,6 +244,18 @@ def generate_command(subject_id, command_config, log):
 
 
 def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
+    """Run segmentHA_T1.sh and convert results to .csv files
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        mri_dir (str): the "mri" directory in the subject directory
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
 
     log.info("Starting segmentation of hippocampal subfields...")
     cmd = ["segmentHA_T1.sh", subject_id]
@@ -270,6 +282,18 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
 
 
 def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
+    """Run quantifyBrainstemStructures.sh and convert output to .csv.
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        mri_dir (str): the "mri" directory in the subject directory
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
 
     log.info("Starting segmentation of brainstem subfields...")
     cmd = ["segmentBS.sh", subject_id]
@@ -292,6 +316,17 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
 
 
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
+    """Runs xhemireg ands urfreg.
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
 
     log.info("Running surface registrations...")
     # Register hemispheres
@@ -314,7 +349,17 @@ def do_gear_register_surfaces(subject_id, dry_run, environ, log):
 
 
 def do_gear_convert_surfaces(subject_dir, dry_run, environ, log):
-    """ Convert selected surfaces in subject/surf to obj in output."""
+    """Convert selected surfaces in subject/surf to obj in output.
+
+    Args:
+        subject_dir (str): Full path to Freesurfer subject directory
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
 
     log.info("Converting surfaces to object (.obj) files...")
     surf_dir = f"{subject_dir}/surf"
@@ -345,7 +390,18 @@ def do_gear_convert_surfaces(subject_dir, dry_run, environ, log):
 
 
 def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
-    """Convert select volumes in subject/mri to nifti."""
+    """Convert select volumes in subject/mri to nifti.
+
+    Args:
+        config (GearToolkitContext.config): config dictionary from config.json
+        mri_dir (str): the "mri" directory in the subject directory
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
 
     log.info("Converting volumes to NIfTI files...")
     mri_mgz_files = [
@@ -378,7 +434,17 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
 
 
 def do_gear_convert_stats(subject_id, dry_run, environ, log):
-    """Write aseg stats to a table."""
+    """Write aseg stats to a table.
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
 
     log.info("Exporting stats files csv...")
     cmd = [
@@ -459,7 +525,7 @@ def main(gtk_context):
     log.debug("subject_id %s", subject_id)
 
     subject_dir = Path(SUBJECTS_DIR / subject_id)
-    work_dir = Path(gtk_context.output_dir / subject_id)
+    work_dir = gtk_context.output_dir / subject_id
     if not work_dir.is_symlink():
         work_dir.symlink_to(subject_dir)
 
@@ -525,26 +591,14 @@ def main(gtk_context):
             + f"_{subject_id}_{gtk_context.destination['id']}.zip"
         )
         zip_output(
-            str(gtk_context.output_dir),
-            subject_id,
-            zip_file_name,
-            dry_run=False,
-            exclude_files=None,
+            str(gtk_context.output_dir), subject_id, zip_file_name,
         )
 
         # clean up: remove output that was zipped
         output_analysisid_dir = gtk_context.output_dir / subject_id
-        if Path(output_analysisid_dir).exists():
-            if not config.get("gear-all-output"):
-
-                log.debug('removing output directory "%s"', str(output_analysisid_dir))
-                output_analysisid_dir.unlink()
-
-            else:
-                log.info(
-                    'NOT removing output directory "%s"', str(output_analysisid_dir)
-                )
-
+        if output_analysisid_dir.exists():
+            log.debug('removing output directory "%s"', str(output_analysisid_dir))
+            output_analysisid_dir.unlink()
         else:
             log.info("Output directory does not exist so it cannot be removed")
 

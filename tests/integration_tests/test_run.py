@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-"""
+"""Test in a gear-like environment by unzipping config.json, input/, output, etc."""
 
 import json
 import logging
@@ -65,6 +64,7 @@ def install_gear(zip_name):
 
 
 def print_caplog(caplog):
+    """Show what has been captured in the log."""
 
     print("\nmessages")
     for ii, msg in enumerate(caplog.messages):
@@ -96,6 +96,7 @@ def search_caplog_contains(caplog, find_me, contains_me):
 
 
 def print_captured(captured):
+    """Show what has been captured in std out and err."""
 
     print("\nout")
     for ii, msg in enumerate(captured.out.split("\n")):
@@ -332,5 +333,3 @@ def test_wet_run_fails(caplog):
             caplog,
             "Zipping output file freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip",
         )
-        # Make sure subject was kept
-        assert Path("/flywheel/v0/output/TOME_3024/scripts/recon-all.error").exists()
