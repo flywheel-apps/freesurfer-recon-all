@@ -43,13 +43,14 @@ def set_core_count(config, log):
     if n_cpus:
         del config["n_cpus"]
         if n_cpus > os_cpu_count:
-            log.warning("n_cpus > number available, using %d", os_cpu_count)
+            log.warning("n_cpus > number available, using max %d", os_cpu_count)
             config["openmp"] = os_cpu_count
-        elif n_cpus == 0:
-            log.info("n_cpus == 0, using %d (maximum available)", os_cpu_count)
-            config["openmp"] = os_cpu_count
+        else:
+            log.info("n_cpus using %d from config", n_cpus)
+            config["openmp"] = n_cpus
     else:  # Default is to use all cpus available
         config["openmp"] = os_cpu_count  # zoom zoom
+        log.info("using n_cpus = %d (maximum available)", os_cpu_count)
 
 
 def check_for_previous_run(log):
@@ -531,103 +532,119 @@ def main(gtk_context):
 
     command = generate_command(subject_id, command_config, log)
 
+    num_tries = 0
     return_code = 0
 
-    try:
-
-        if len(errors) > 0:
-            log.info("Command was NOT run because of previous errors.")
-            return_code = 1
-
-        else:
-
-            if dry_run:
-                e = "gear-dry-run is set: Command was NOT run."
-                log.warning(e)
-                warnings.append(e)
-                pretend_it_ran(gtk_context)
-
-            else:
-                # This is what it is all about
-                exec_command(command, environ=environ, shell=True, cont_output=True)
-
-            # Optional Segmentations
-            mri_dir = f"{subject_dir}/mri"
-
-            if config.get("gear-hippocampal_subfields"):
-                do_gear_hippocampal_subfields(
-                    subject_id, mri_dir, dry_run, environ, log
-                )
-
-            if config.get("gear-brainstem_structures"):
-                do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log)
-
-            if config.get("gear-register_surfaces"):
-                do_gear_register_surfaces(subject_id, dry_run, environ, log)
-
-            if config.get("gear-convert_surfaces"):
-                do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
-
-            if config.get("gear-convert_volumes"):
-                do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
-
-            if config.get("gear-convert_stats"):
-                do_gear_convert_stats(subject_id, dry_run, environ, log)
-
-    except RuntimeError as exc:
-        errors.append(exc)
-        log.critical(exc)
-        log.exception("Unable to execute command.")
+    if len(errors) > 0:
+        log.info("Command was NOT run because of previous errors.")
         return_code = 1
 
-    finally:
+    else:
 
-        # Cleanup, move all results to the output directory
+        while num_tries < 2:
 
-        # zip entire output/<subject_id> folder into
-        #  <gear_name>_<subject_id>_<analysis.id>.zip
-        zip_file_name = (
-            gtk_context.manifest["name"]
-            + f"_{subject_id}_{gtk_context.destination['id']}.zip"
-        )
-        zip_output(
-            str(gtk_context.output_dir), subject_id, zip_file_name,
-        )
+            return_code = 0
 
-        # clean up: remove output that was zipped
-        output_analysisid_dir = gtk_context.output_dir / subject_id
-        if output_analysisid_dir.exists():
-            log.debug('removing output directory "%s"', str(output_analysisid_dir))
-            output_analysisid_dir.unlink()
-        else:
-            log.info("Output directory does not exist so it cannot be removed")
+            try:
+                num_tries += 1
 
-        # Report errors and warnings at the end of the log so they can be easily seen.
-        if len(warnings) > 0:
-            msg = "Previous warnings:\n"
-            for err in warnings:
-                if str(type(err)).split("'")[1] == "str":
-                    # show string
-                    msg += "  Warning: " + str(err) + "\n"
-                else:  # show type (of warning) and warning message
-                    err_type = str(type(err)).split("'")[1]
-                    msg += f"  {err_type}: {str(err)}\n"
-            log.info(msg)
+                if dry_run:
+                    e = "gear-dry-run is set: Command was NOT run."
+                    log.warning(e)
+                    warnings.append(e)
+                    pretend_it_ran(gtk_context)
 
-        if len(errors) > 0:
-            msg = "Previous errors:\n"
-            for err in errors:
-                if str(type(err)).split("'")[1] == "str":
-                    # show string
-                    msg += "  Error msg: " + str(err) + "\n"
-                else:  # show type (of error) and error message
-                    err_type = str(type(err)).split("'")[1]
-                    msg += f"  {err_type}: {str(err)}\n"
-            log.info(msg)
+                # This is what it is all about
+                exec_command(
+                    command,
+                    environ=environ,
+                    dry_run=dry_run,
+                    shell=True,
+                    cont_output=True,
+                )
 
-        gtk_context.log.info("%s Gear is done.  Returning 0", CONTAINER)
+                # Optional Segmentations
+                mri_dir = f"{subject_dir}/mri"
 
-        sys.exit(return_code)
+                if config.get("gear-hippocampal_subfields"):
+                    do_gear_hippocampal_subfields(
+                        subject_id, mri_dir, dry_run, environ, log
+                    )
+
+                if config.get("gear-brainstem_structures"):
+                    do_gear_brainstem_structures(
+                        subject_id, mri_dir, dry_run, environ, log
+                    )
+
+                if config.get("gear-register_surfaces"):
+                    do_gear_register_surfaces(subject_id, dry_run, environ, log)
+
+                if config.get("gear-convert_surfaces"):
+                    do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
+
+                if config.get("gear-convert_volumes"):
+                    do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
+
+                if config.get("gear-convert_stats"):
+                    do_gear_convert_stats(subject_id, dry_run, environ, log)
+
+            except RuntimeError as exc:
+                errors.append(exc)
+                log.critical(exc)
+                log.exception("Unable to execute command.")
+                return_code = 1
+
+    # zip entire output/<subject_id> folder into
+    #  <gear_name>_<subject_id>_<analysis.id>.zip
+    zip_file_name = (
+        gtk_context.manifest["name"]
+        + f"_{subject_id}_{gtk_context.destination['id']}.zip"
+    )
+    zip_output(
+        str(gtk_context.output_dir), subject_id, zip_file_name,
+    )
+
+    # clean up: remove output that was zipped
+    output_analysisid_dir = gtk_context.output_dir / subject_id
+    if output_analysisid_dir.exists():
+        log.debug('removing output directory "%s"', str(output_analysisid_dir))
+        output_analysisid_dir.unlink()
+    else:
+        log.info("Output directory does not exist so it cannot be removed")
+
+    # Report errors and warnings at the end of the log so they can be easily seen.
+    if len(warnings) > 0:
+        msg = "Previous warnings:\n"
+        for err in warnings:
+            if str(type(err)).split("'")[1] == "str":
+                # show string
+                msg += "  Warning: " + str(err) + "\n"
+            else:  # show type (of warning) and warning message
+                err_type = str(type(err)).split("'")[1]
+                msg += f"  {err_type}: {str(err)}\n"
+        log.info(msg)
+
+    if len(errors) > 0:
+        msg = "Previous errors:\n"
+        for err in errors:
+            if str(type(err)).split("'")[1] == "str":
+                # show string
+                msg += "  Error msg: " + str(err) + "\n"
+            else:  # show type (of error) and error message
+                err_type = str(type(err)).split("'")[1]
+                msg += f"  {err_type}: {str(err)}\n"
+        log.info(msg)
+
+    news = "succeeded" if return_code == 0 else "failed"
+
+    if num_tries == 1:
+        log.info("Gear %s on first try!", news)
+    else:
+        log.info("Gear %s on second attempt.", news)
+
+    log.info("%s is done.  Returning %d", CONTAINER, return_code)
+
+    sys.exit(return_code)
 
 
 if __name__ == "__main__":

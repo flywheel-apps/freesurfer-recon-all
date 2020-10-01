@@ -83,29 +83,6 @@ def search_caplog(caplog, find_me):
     return ""
 
 
-def search_caplog_contains(caplog, find_me, contains_me):
-    """Search caplog message for find_me, return true if it contains contains_me"""
-
-    for msg in caplog.messages:
-        if find_me in msg:
-            print(f"Found '{find_me}' in '{msg}'")
-            if contains_me in msg:
-                print(f"Found '{contains_me}' in '{msg}'")
-                return True
-    return False
-
-
-def print_captured(captured):
-    """Show what has been captured in std out and err."""
-
-    print("\nout")
-    for ii, msg in enumerate(captured.out.split("\n")):
-        print(f"{ii:2d} {msg}")
-    print("\nerr")
-    for ii, msg in enumerate(captured.err.split("\n")):
-        print(f"{ii:2d} {msg}")
-
-
 #
 #  Tests
 #
@@ -333,3 +310,4 @@ def test_wet_run_fails(caplog):
             caplog,
             "Zipping output file freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip",
         )
+        assert search_caplog(caplog, "Gear failed on second attempt")

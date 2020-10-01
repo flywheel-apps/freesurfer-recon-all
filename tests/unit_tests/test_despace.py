@@ -11,16 +11,6 @@ FILES = [
 ]
 
 
-def print_captured(captured):
-
-    print("\nout")
-    for ii, msg in enumerate(captured.out.split("\n")):
-        print(f"{ii:2d} {msg}")
-    print("\nerr")
-    for ii, msg in enumerate(captured.err.split("\n")):
-        print(f"{ii:2d} {msg}")
-
-
 def test_despace_works(capsys, tmp_path):
 
     for adir in DIRS:
@@ -39,6 +29,3 @@ def test_despace_works(capsys, tmp_path):
 
     assert found[0].name == "a_dir_with_spaces"
     assert found[2].name == "afile_with_spaces"
-
-    # captured = capsys.readouterr()
-    # print_captured(captured)
