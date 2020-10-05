@@ -63,6 +63,47 @@ def install_gear(zip_name):
             shutil.move(str(subj), str(subjects_dir))
 
 
+def print_captured(captured):
+    """Show what has been captured in std out and err."""
+
+    print("\nout")
+    for ii, msg in enumerate(captured.out.split("\n")):
+        print(f"{ii:2d} {msg}")
+    print("\nerr")
+    for ii, msg in enumerate(captured.err.split("\n")):
+        print(f"{ii:2d} {msg}")
+
+
+def search_stdout_contains(captured, find_me, contains_me):
+    """Search stdout message for find_me, return true if it contains contains_me"""
+
+    for msg in captured.out.split("/n"):
+        if find_me in msg:
+            print(f"Found '{find_me}' in '{msg}'")
+            if contains_me in msg:
+                print(f"Found '{contains_me}' in '{msg}'")
+                return True
+    return False
+
+
+def search_sysout(captured, find_me):
+    """Search capsys message for find_me, return message"""
+
+    for msg in captured.out.split("/n"):
+        if find_me in msg:
+            return msg
+    return ""
+
+
+def search_syserr(captured, find_me):
+    """Search capsys message for find_me, return message"""
+
+    for msg in captured.err.split("\n"):
+        if find_me in msg:
+            return msg
+    return ""
+
+
 def print_caplog(caplog):
     """Show what has been captured in the log."""
 
@@ -169,13 +210,11 @@ def test_hippo_works(caplog):
     assert 0
 
 
-def test_dry_run_works(caplog):
+def test_dry_run_works(capfd):
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
         TestCase.skipTest("", f"No API key available in {str(user_json)}")
-
-    caplog.set_level(logging.DEBUG)
 
     install_gear("dry_run.zip")
 
@@ -185,21 +224,22 @@ def test_dry_run_works(caplog):
 
             run.main(gtk_context)
 
-        print_caplog(caplog)
         print(excinfo)
+
+        captured = capfd.readouterr()
+        print_captured(captured)
 
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
-        assert search_caplog(caplog, "Warning: gear-dry-run is set")
+        assert search_sysout(captured, "Warning: gear-dry-run is set")
+        assert search_sysout(captured, "Gear succeeded on first try!")
 
 
-def test_prev_works(caplog):
+def test_prev_works(capfd):
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
         TestCase.skipTest("", f"No API key available in {str(user_json)}")
-
-    caplog.set_level(logging.DEBUG)
 
     install_gear("prev.zip")
 
@@ -209,23 +249,21 @@ def test_prev_works(caplog):
 
             run.main(gtk_context)
 
-        print_caplog(caplog)
-        print(excinfo)
+        captured = capfd.readouterr()
+        print_captured(captured)
 
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
-        assert search_caplog(caplog, "Warning: gear-dry-run is set")
-        command = search_caplog(caplog, "command is:")
-        assert command[34:56] == "'-subjid', 'TOME_3024'"
+        assert search_sysout(captured, "Warning: gear-dry-run is set")
+        command = search_sysout(captured, "running from previous run")
+        assert "-subjid TOME_3024" in command
 
 
-def test_nii2_works(caplog):
+def test_nii2_works(capfd):
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
         TestCase.skipTest("", f"No API key available in {str(user_json)}")
-
-    caplog.set_level(logging.DEBUG)
 
     install_gear("nii2.zip")
 
@@ -235,28 +273,23 @@ def test_nii2_works(caplog):
 
             run.main(gtk_context)
 
-        print_caplog(caplog)
-        print(excinfo)
+        captured = capfd.readouterr()
+        print_captured(captured)
 
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
-        assert search_caplog(caplog, "Warning: gear-dry-run is set")
-        command = search_caplog(caplog, "command is:")
-        assert command[34:86] == "'-i', '/flywheel/v0/input/anatomical/T1w_MPR.nii.gz'"
-        assert (
-            command[89:146]
-            == "-i', '/flywheel/v0/input/t1w_anatomical_2/T1w_MPR.nii.gz'"
-        )
+        assert search_sysout(captured, "Warning: gear-dry-run is set")
+        command = search_sysout(captured, "command is:")
+        assert "'-i', '/flywheel/v0/input/anatomical/T1w_MPR.nii.gz'" in command
+        assert "-i', '/flywheel/v0/input/t1w_anatomical_2/T1w_MPR.nii.gz'" in command
         assert "-openmp" in command
 
 
-def test_dcm_zip_works(caplog):
+def test_dcm_zip_works(capfd):
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
         TestCase.skipTest("", f"No API key available in {str(user_json)}")
-
-    caplog.set_level(logging.DEBUG)
 
     install_gear("dcm_zip.zip")
 
@@ -266,22 +299,22 @@ def test_dcm_zip_works(caplog):
 
             run.main(gtk_context)
 
-        print_caplog(caplog)
-        print(excinfo)
+        captured = capfd.readouterr()
+        print_captured(captured)
 
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
-        assert search_caplog(caplog, ANATOMICAL_STR)
-        assert search_caplog(caplog, "Warning: gear-dry-run is set")
-        command = search_caplog(caplog, "command is:")
+        assert search_sysout(captured, ANATOMICAL_STR)
+        assert search_sysout(captured, "Warning: gear-dry-run is set")
+        command = search_sysout(captured, "command is:")
         assert (
-            command[12:78]
-            == "['time', 'recon-all', '-i', '/flywheel/v0/input/anatomical/dicoms/"
+            "['time', 'recon-all', '-i', '/flywheel/v0/input/anatomical/dicoms/"
+            in command
         )
         assert "-openmp" in command
 
 
-def test_wet_run_fails(caplog):
+def test_wet_run_fails(capfd):
 
     # clean up after previous tests so this one will run
     shutil.rmtree("/usr/local/freesurfer/subjects/TOME_3024")
@@ -289,8 +322,6 @@ def test_wet_run_fails(caplog):
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
         TestCase.skipTest("", f"No API key available in {str(user_json)}")
-
-    caplog.set_level(logging.DEBUG)
 
     install_gear("wet_run.zip")
 
@@ -300,14 +331,15 @@ def test_wet_run_fails(caplog):
 
             run.main(gtk_context)
 
-        print_caplog(caplog)
-        print(excinfo)
+        captured = capfd.readouterr()
+        print_captured(captured)
 
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 1
         # Make sure it saves output even after an error
-        assert search_caplog(
-            caplog,
+        assert search_sysout(
+            captured,
             "Zipping output file freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip",
         )
-        assert search_caplog(caplog, "Gear failed on second attempt")
+        assert search_sysout(captured, "Gear failed on second attempt")
+        assert search_sysout(captured, "time recon-all -subjid TOME_3024 -all")

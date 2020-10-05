@@ -244,6 +244,30 @@ def generate_command(subject_id, command_config, log):
     return command
 
 
+def remove_i_args(command):
+    """Remove -i <path> arguments from command.
+
+    Args:
+        commmand (list of str): the command to run recon-all
+
+    Returns:
+        resume_commmand (list of str): same as command but without -i <arg>
+    """
+
+    resume_command = []
+
+    skip_arg = False
+    for arg in command:
+        if arg == "-i":
+            skip_arg = True  # and don't append
+        elif skip_arg:
+            skip_arg = False  # it is hereby skipped
+        else:
+            resume_command.append(arg)
+
+    return resume_command
+
+
 def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
     """Run segmentHA_T1.sh and convert results to .csv files
 
@@ -478,11 +502,18 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
 
 def main(gtk_context):
 
-    fw = gtk_context.client
+    config = gtk_context.config
 
+    # Setup basic logging and log the configuration for this job
+    if config["gear-log-level"] == "INFO":
+        gtk_context.init_logging("info")
+    else:
+        gtk_context.init_logging("debug")
+    gtk_context.log_config()
     log = gtk_context.log
 
-    config = gtk_context.config
+    fw = gtk_context.client
+
     dry_run = config.get("gear-dry-run")
 
     # Keep a list of errors and warning to print all in one place at end of log
@@ -541,7 +572,8 @@ def main(gtk_context):
 
     else:
 
-        while num_tries < 2:
+        didnt_run_yet = True
+        while num_tries < 2 and didnt_run_yet:
 
             return_code = 0
 
@@ -588,11 +620,14 @@ def main(gtk_context):
                 if config.get("gear-convert_stats"):
                     do_gear_convert_stats(subject_id, dry_run, environ, log)
 
+                didnt_run_yet = False  #  If here, no error so it did run
+
             except RuntimeError as exc:
                 errors.append(exc)
                 log.critical(exc)
                 log.exception("Unable to execute command.")
                 return_code = 1
+                command = remove_i_args(command)  # try again with -i <arg> removed
 
     # zip entire output/<subject_id> folder into
     #  <gear_name>_<subject_id>_<analysis.id>.zip
