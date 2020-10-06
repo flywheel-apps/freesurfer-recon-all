@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 import flywheel_gear_toolkit
+import pandas as pd
 from flywheel_gear_toolkit.interfaces.command_line import exec_command
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
@@ -27,6 +28,8 @@ INPUT_DIR = Path(FLYWHEEL_BASE / "input")
 SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
 FREESURFER_HOME = "/usr/local/freesurfer"
 LICENSE_FILE = FREESURFER_HOME + "/license.txt"
+
+METADATA = {"analysis": {"info": {}}}
 
 
 def set_core_count(config, log):
@@ -292,6 +295,7 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
         "rh.amygNucVolumes-T1.v21.txt",
     ]
     for tf in txt_files:
+        tablefile = f"{OUTPUT_DIR}/{subject_id}_{tf.replace('.txt','.csv')}"
         cmd = [
             "tr",
             "' '",
@@ -299,11 +303,23 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
             "<",
             f"{mri_dir}/{tf}",
             ">",
-            f"{OUTPUT_DIR}/{subject_id}_{tf.replace('.txt','.csv')}",
+            tablefile,
         ]
         exec_command(
             cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True
         )
+
+        # add those stats to metadata on the destination analysis container
+        if Path(tablefile).exists():
+            log.info("%s exists.  Adding to metadata.", tablefile)
+            stats_df = pd.read_csv(tablefile, names=["struc", "measure"])
+            dft = stats_df.transpose()
+            dft.columns = dft.iloc[0]
+            dft = dft[1:]
+            stats_json = dft.drop(dft.columns[0], axis=1).to_dict("records")[0]
+            METADATA["analysis"]["info"][f"{tf.replace('.txt','')}"] = stats_json
+        else:
+            log.info("%s is missing", tablefile)
 
 
 def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
@@ -323,6 +339,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
     log.info("Starting segmentation of brainstem subfields...")
     cmd = ["segmentBS.sh", subject_id]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+    tablefile = f"{OUTPUT_DIR}/{subject_id}_brainstemSsVolumes.v2.csv"
     cmd = [
         "quantifyBrainstemStructures.sh",
         f"{mri_dir}/brainstemSsVolumes.v2.txt",
@@ -335,9 +352,15 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
         "<",
         f"{mri_dir}/brainstemSsVolumes.v2.txt",
         ">",
-        f"{OUTPUT_DIR}/{subject_id}_brainstemSsVolumes.v2.csv",
+        tablefile,
     ]
     exec_command(cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True)
+
+    # add those stats to metadata on the destination analysis container
+    if Path(tablefile).exists():
+        stats_df = pd.read_csv(tablefile)
+        stats_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict("r")[0]
+        METADATA["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
@@ -472,21 +495,29 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
     """
 
     log.info("Exporting stats files csv...")
+    tablefile = f"{OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv"
     cmd = [
         "asegstats2table",
         "-s",
         subject_id,
         "--delimiter",
         "comma",
-        f"--tablefile={OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv",
+        f"--tablefile={tablefile}",
     ]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+
+    # add those stats to metadata on the destination analysis container
+    if Path(tablefile).exists():
+        aseg_stats_df = pd.read_csv(tablefile)
+        as_json = aseg_stats_df.drop(aseg_stats_df.columns[0], axis=1).to_dict("r")[0]
+        METADATA["analysis"]["info"]["aseg_stats_vol_mm3"] = as_json
 
     # Parse the aparc files and write to table
     hemi = ["lh", "rh"]
     parc = ["aparc.a2009s", "aparc", "aparc.DKTatlas", "aparc.pial"]
     for hh in hemi:
         for pp in parc:
+            tablefile = f"{OUTPUT_DIR}/{subject_id}_{hh}_{pp}_stats_area_mm2.csv"
             cmd = [
                 "aparcstats2table",
                 "-s",
@@ -494,10 +525,16 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
                 f"--hemi={hh}",
                 f"--delimiter=comma",
                 f"--parc={pp}",
-                f"--tablefile={OUTPUT_DIR}/{subject_id}_{hh}_{pp}"
-                + "_stats_area_mm2.csv",
+                f"--tablefile={tablefile}",
             ]
             exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+
+            if Path(tablefile).exists():
+                aparc_stats_df = pd.read_csv(tablefile)
+                ap_json = aparc_stats_df.drop(
+                    aparc_stats_df.columns[0], axis=1
+                ).to_dict("r")[0]
+                METADATA["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
 
 
 def main(gtk_context):
@@ -585,6 +622,9 @@ def main(gtk_context):
                     log.warning(e)
                     warnings.append(e)
                     pretend_it_ran(gtk_context)
+                    METADATA["analysis"]["info"]["dry_run"] = {
+                        "How dry I am": "Say to Mister Temperance you're through"
+                    }
 
                 # This is what it is all about
                 exec_command(
@@ -669,6 +709,11 @@ def main(gtk_context):
                 err_type = str(type(err)).split("'")[1]
                 msg += f"  {err_type}: {str(err)}\n"
         log.info(msg)
+
+    if len(METADATA["analysis"]["info"]) > 0:
+        with open(f"{gtk_context.output_dir}/.metadata.json", "w") as fff:
+            json.dump(METADATA, fff)
+            log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
 
     news = "succeeded" if return_code == 0 else "failed"
 
