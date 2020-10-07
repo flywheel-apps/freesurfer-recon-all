@@ -623,7 +623,7 @@ def main(gtk_context):
                     warnings.append(e)
                     pretend_it_ran(gtk_context)
                     METADATA["analysis"]["info"]["dry_run"] = {
-                        "How dry I am": "Say to Mister Temperance you're through"
+                        "How dry I am": "Say to Mister Temperance youre through"
                     }
 
                 # This is what it is all about
@@ -713,7 +713,10 @@ def main(gtk_context):
     if len(METADATA["analysis"]["info"]) > 0:
         with open(f"{gtk_context.output_dir}/.metadata.json", "w") as fff:
             json.dump(METADATA, fff)
-            log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
+        log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
+    else:
+        log.info("No data available to save in .metadata.json.")
+    log.debug(".metadata.json: %s", json.dumps(METADATA, indent=4))
 
     news = "succeeded" if return_code == 0 else "failed"
 

@@ -34,8 +34,6 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
 
             run.main(gtk_context)
 
-        print(excinfo)
-
         captured = capfd.readouterr()
         print_captured(captured)
 
@@ -43,7 +41,6 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
 
         with open("/flywheel/v0/output/.metadata.json", "r") as fff:
             metadata = json.load(fff)
-        print(".metadat.json", json.dumps(metadata, indent=4))
 
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
@@ -58,6 +55,7 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
             "Basal-nucleus" in metadata["analysis"]["info"]["lh.amygNucVolumes-T1.v21"]
         )
         assert "Midbrain" in metadata["analysis"]["info"]["brainstemSsVolumes.v2"]
+        assert 0
 
 
 def test_prev_works(capfd, install_gear, print_captured, search_sysout):
