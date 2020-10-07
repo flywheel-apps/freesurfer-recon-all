@@ -55,7 +55,6 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
             "Basal-nucleus" in metadata["analysis"]["info"]["lh.amygNucVolumes-T1.v21"]
         )
         assert "Midbrain" in metadata["analysis"]["info"]["brainstemSsVolumes.v2"]
-        assert 0
 
 
 def test_prev_works(capfd, install_gear, print_captured, search_sysout):
