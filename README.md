@@ -11,7 +11,7 @@ Note: the current version of Freesurfer has an known issue with using the `-para
 
 ### anatomical (required)
 
-Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive. NOTE: A freesurfer-recon-all Gear output can be used provided the filename is preserved from its initial output (e.g., freesurfer-recon-all_<subject_code>*.zip)
+Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive.
 
 ### freesurfer_license (optional)
 A license is required for this gear to run but it does not have to be provided as an input file.
@@ -35,7 +35,7 @@ Generate an automated segmentation of four different brainstem structures from t
 
 ### gear-convert_stats (optional)
 
-Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical stats file created by recon-all and/or mri_segstats (eg, aseg.stats) into a table in which each line is a subject and each column is a segmentation. The values are the volume of the segmentation in mm3 or the mean intensity over the structure. Also Converts all cortical stats file created by recon-all and or mris_anatomical_stats (eg, ?h.aparc.stats) into a table in which each line is a subject and each column is a parcellation. By default, the values are the area of the parcellation in mm2.  These tables will be written to .csv files that will be available in the final results.  The values in the tables will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
+Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical stats file created by recon-all and/or mri_segstats (e.g., aseg.stats) into a table in which each line is a subject and each column is a segmentation. The values are the volume of the segmentation in mm3 or the mean intensity over the structure. Also Converts all cortical stats file created by recon-all and or mris_anatomical_stats (e.g., ?h.aparc.stats) into a table in which each line is a subject and each column is a parcellation. By default, the values are the area of the parcellation in mm2.  These tables will be written to .csv files that will be available in the final results.  The values in the tables will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
 
 ### gear-convert_surfaces (optional)
 
@@ -51,6 +51,7 @@ Do everything except actually execute recon-all.  This is useful for debugging. 
 ### gear-FREESURFER_LICENSE (optional)
 Text from license file generated during FreeSurfer registration.
 Copy the contents of the license file and paste it into this argument.
+There are [three ways](https://docs.flywheel.io/hc/en-us/articles/360013235453-How-to-include-a-Freesurfer-license-file-in-order-to-run-the-fMRIPrep-gear-) to provide the license to this gear.
 
 ### gear-hippocampal_subfields (optional)
 
@@ -61,7 +62,7 @@ Gear Log verbosity level (INFO|DEBUG)
 
 ### gear-register_surfaces (optional)
 
-Runs the xhemireg and surfreg scripts on your subject after having run recon-all in order to register the subject's left and inverted-right hemispheres to the fsaverage_sym subject. (The fsaverage_sym subject is a version of the fsaverage subject with a single the left-right symmetric pseudo-hemisphere.) (Default=true).
+Runs the xhemireg and surfreg scripts on your subject after having run recon-all in order to register the subject's left and inverted-right hemispheres to the fsaverage_sym subject.  The fsaverage_sym subject is a version of the fsaverage subject with a single the left-right symmetric pseudo-hemisphere.  (Default=true).
 
 ### n_cpus (optional)
 Number of CPUs/cores use.  The default is to use all available cores.
@@ -76,10 +77,10 @@ Command line options to the recon-all algorithm.  By default we enable '-all' an
 
 ### subject_id (optional)
 
-Desired subject ID. Any spaces in the subject_id will be replaced with underscores and will be used to name the resulting FreeSurfer output directory. NOTE: If using a previous Gear output as input the subject code will be parsed from the input archive, however it should still be provided here for good measure.  The subject_id can only have file-name-safe characters (no spaces, special characters, etc.) because this will be used as the name of a directory for the subject.
+Desired subject ID. This is used to name the resulting FreeSurfer output directory.  The subject_id can only have file-name-safe characters (no spaces, special characters, etc.) because this will be used as the name of a directory for the subject.  NOTE: If using a previous Gear output as input the subject code will be parsed from the input archive.
 
 # Workflow
-This gear runs recon-all on the provided inputs with the given configuration options.  See [https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable](https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable) for details.
+This gear runs recon-all on the provided inputs with the given configuration options.  See [https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki](https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki) in general and [https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable](https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable) in particular for complete details.
 
 # Outputs
 All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.
