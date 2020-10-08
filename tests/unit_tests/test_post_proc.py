@@ -21,20 +21,20 @@ def test_convert_stats_works(caplog, install_gear, print_caplog):
     with open("/tmp/gear_environ.json", "r") as f:
         environ = json.load(f)
 
-    run.do_gear_convert_stats("sub-TOME3024", False, environ, log)
+    metadata = {"analysis": {"info": {}}}
+
+    run.do_gear_convert_stats("sub-TOME3024", False, environ, metadata, log)
 
     print_caplog(caplog)
 
-    print(".metadat.json", json.dumps(run.METADATA, indent=4))
+    print(".metadat.json", json.dumps(metadata, indent=4))
 
     assert Path("output/sub-TOME3024_rh_aparc_stats_area_mm2.csv").exists()
     assert (
-        "Left-Lateral-Ventricle"
-        in run.METADATA["analysis"]["info"]["aseg_stats_vol_mm3"]
+        "Left-Lateral-Ventricle" in metadata["analysis"]["info"]["aseg_stats_vol_mm3"]
     )
     assert (
-        "lh_cuneus_area"
-        in run.METADATA["analysis"]["info"]["lh_aparc.pial_stats_area_mm2"]
+        "lh_cuneus_area" in metadata["analysis"]["info"]["lh_aparc.pial_stats_area_mm2"]
     )
 
 
@@ -70,10 +70,14 @@ def test_brainstem_works(caplog, install_gear, print_caplog):
 
     mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
 
+    metadata = {"analysis": {"info": {}}}
+
     with open("/tmp/gear_environ.json", "r") as f:
         environ = json.load(f)
 
-    run.do_gear_brainstem_structures("sub-TOME3024", mri_dir, False, environ, log)
+    run.do_gear_brainstem_structures(
+        "sub-TOME3024", mri_dir, False, environ, metadata, log
+    )
 
     print_caplog(caplog)
 
@@ -88,13 +92,17 @@ def test_hippo_works(caplog, install_gear, print_caplog):
 
     install_gear("hippo.zip")
 
+    metadata = {"analysis": {"info": {}}}
+
     mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
 
     with open("/tmp/gear_environ.json", "r") as f:
         environ = json.load(f)
 
     # This takes 20 minutes!
-    run.do_gear_hippocampal_subfields("sub-TOME3024", mri_dir, False, environ, log)
+    run.do_gear_hippocampal_subfields(
+        "sub-TOME3024", mri_dir, False, environ, metadata, log
+    )
 
     print_caplog(caplog)
 

@@ -18,6 +18,7 @@ import run
 log = logging.getLogger(__name__)
 
 
+METADATA = {"analysis": {"info": {}}}
 ANATOMICAL_STR = "anatomical is '/flywheel/v0/input/anatomical/dicoms/1.2.826.0.1.3680043.8.498.81096423295716363709677774784503056177.MR.dcm'"
 DRY_FILE = (
     "/flywheel/v0/output/freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip"
@@ -51,7 +52,7 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
         # make sure file in subject directory made it
         with zipfile.ZipFile(DRY_FILE) as zf:
             dry_run_file_contents = zf.read(zf.namelist()[0])
-        log.debug("dry_run_file_contents = %s", dry_run_file_contents)
+        print(f"dry_run_file_contents = '{dry_run_file_contents}'")
         assert dry_run_file_contents == b"Nothing to see here."
 
         with open("/flywheel/v0/output/.metadata.json", "r") as fff:
@@ -111,6 +112,9 @@ def test_nii2_works(capfd, install_gear, print_captured, search_sysout):
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
         assert search_sysout(captured, "Warning: gear-dry-run is set")
+        assert search_sysout(
+            captured, "'smubject ID' has non-file-name-safe characters"
+        )
         command = search_sysout(captured, "command is:")
         assert "'-i', '/flywheel/v0/input/anatomical/T1w_MPR.nii.gz'" in command
         assert "-i', '/flywheel/v0/input/t1w_anatomical_2/T1w_MPR.nii.gz'" in command

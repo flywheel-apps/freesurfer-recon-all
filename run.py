@@ -28,8 +28,6 @@ SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
 FREESURFER_HOME = "/usr/local/freesurfer"
 LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
-METADATA = {"analysis": {"info": {}}}
-
 
 def set_core_count(config, log):
     """get # cpu's to set -openmp by setting config["openmp"]
@@ -270,7 +268,7 @@ def remove_i_args(command):
     return resume_command
 
 
-def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
+def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadata, log):
     """Run segmentHA_T1.sh and convert results to .csv files
 
     Args:
@@ -278,6 +276,7 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
         mri_dir (str): the "mri" directory in the subject directory
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -316,12 +315,12 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
             dft.columns = dft.iloc[0]
             dft = dft[1:]
             stats_json = dft.drop(dft.columns[0], axis=1).to_dict("records")[0]
-            METADATA["analysis"]["info"][f"{tf.replace('.txt','')}"] = stats_json
+            metadata["analysis"]["info"][f"{tf.replace('.txt','')}"] = stats_json
         else:
             log.info("%s is missing", tablefile)
 
 
-def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
+def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata, log):
     """Run quantifyBrainstemStructures.sh and convert output to .csv.
 
     Args:
@@ -329,6 +328,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
         mri_dir (str): the "mri" directory in the subject directory
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -359,7 +359,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
     if Path(tablefile).exists():
         stats_df = pd.read_csv(tablefile)
         stats_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict("r")[0]
-        METADATA["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
+        metadata["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
@@ -480,13 +480,14 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
-def do_gear_convert_stats(subject_id, dry_run, environ, log):
+def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
     """Write aseg stats to a table.
 
     Args:
         subject_id (str): Freesurfer subject directory name
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -509,7 +510,7 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
     if Path(tablefile).exists():
         aseg_stats_df = pd.read_csv(tablefile)
         as_json = aseg_stats_df.drop(aseg_stats_df.columns[0], axis=1).to_dict("r")[0]
-        METADATA["analysis"]["info"]["aseg_stats_vol_mm3"] = as_json
+        metadata["analysis"]["info"]["aseg_stats_vol_mm3"] = as_json
 
     # Parse the aparc files and write to table
     hemi = ["lh", "rh"]
@@ -533,7 +534,7 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
                 ap_json = aparc_stats_df.drop(
                     aparc_stats_df.columns[0], axis=1
                 ).to_dict("r")[0]
-                METADATA["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
+                metadata["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
 
 
 def main(gtk_context):
@@ -556,6 +557,8 @@ def main(gtk_context):
     # Any errors will prevent the command from running and will cause exit(1)
     errors = []
     warnings = []
+
+    metadata = {"analysis": {"info": {}}}
 
     set_core_count(config, log)
 
@@ -596,6 +599,14 @@ def main(gtk_context):
             "Got subject_id from destination's parent's subject's label:  %s",
             subject_id,
         )
+    new_subject_id = make_file_name_safe(subject_id)
+    if new_subject_id != subject_id:
+        log.warning(
+            "'%s' has non-file-name-safe characters in it!  That is not okay.",
+            subject_id,
+        )
+        subject_id = new_subject_id
+    log.info("Using '%s' as subject_id", subject_id)
 
     subject_dir = Path(SUBJECTS_DIR / subject_id)
     work_dir = gtk_context.output_dir / subject_id
@@ -629,8 +640,14 @@ def main(gtk_context):
                         subject_dir.mkdir()
                         with open(subject_dir / "afile.txt", "w") as afp:
                             afp.write("Nothing to see here.")
-                    METADATA["analysis"]["info"]["dry_run"] = {
-                        "How dry I am": "Say to Mister Temperance youre through"
+                    metadata = {
+                        "analysis": {
+                            "info": {
+                                "dry_run": {
+                                    "How dry I am": "Say to Mister Temperance...."
+                                }
+                            }
+                        }
                     }
 
                 # This is what it is all about
@@ -647,12 +664,12 @@ def main(gtk_context):
 
                 if config.get("gear-hippocampal_subfields"):
                     do_gear_hippocampal_subfields(
-                        subject_id, mri_dir, dry_run, environ, log
+                        subject_id, mri_dir, dry_run, environ, metadata, log
                     )
 
                 if config.get("gear-brainstem_structures"):
                     do_gear_brainstem_structures(
-                        subject_id, mri_dir, dry_run, environ, log
+                        subject_id, mri_dir, dry_run, environ, metadata, log
                     )
 
                 if config.get("gear-register_surfaces"):
@@ -665,7 +682,7 @@ def main(gtk_context):
                     do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
                 if config.get("gear-convert_stats"):
-                    do_gear_convert_stats(subject_id, dry_run, environ, log)
+                    do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
 
                 didnt_run_yet = False  #  If here, no error so it did run
 
@@ -691,7 +708,6 @@ def main(gtk_context):
 
     # clean up: remove output that was zipped
     if work_dir.exists():
-        os.system("ls *")
         log.debug('removing output directory "%s"', str(work_dir))
         work_dir.unlink()
     else:
@@ -720,13 +736,14 @@ def main(gtk_context):
                 msg += f"  {err_type}: {str(err)}\n"
         log.info(msg)
 
-    if len(METADATA["analysis"]["info"]) > 0:
+    destination_id = gtk_context.destination["id"]
+    if len(metadata["analysis"]["info"]) > 0:
         with open(f"{gtk_context.output_dir}/.metadata.json", "w") as fff:
-            json.dump(METADATA, fff)
+            json.dump(metadata, fff)
         log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
     else:
         log.info("No data available to save in .metadata.json.")
-    log.debug(".metadata.json: %s", json.dumps(METADATA, indent=4))
+    log.info(".metadata.json: %s", json.dumps(metadata, indent=4))
 
     news = "succeeded" if return_code == 0 else "failed"
 
