@@ -13,7 +13,6 @@ from flywheel_gear_toolkit.interfaces.command_line import exec_command
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
 
-from utils.dry_run import pretend_it_ran
 from utils.fly.despace import despace
 from utils.fly.make_file_name_safe import make_file_name_safe
 
@@ -251,10 +250,10 @@ def remove_i_args(command):
     """Remove -i <path> arguments from command.
 
     Args:
-        commmand (list of str): the command to run recon-all
+        command (list of str): the command to run recon-all
 
     Returns:
-        resume_commmand (list of str): same as command but without -i <arg>
+        resume_command (list of str): same as command but without -i <arg>
     """
 
     resume_command = []
@@ -587,11 +586,16 @@ def main(gtk_context):
     install_freesurfer_license(gtk_context, LICENSE_FILE)
 
     subject_id = config.get("subject_id")
-    if not subject_id:
+    if subject_id:
+        log.debug("Got subject_id from config: %s", subject_id)
+    else:
         subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
         subject = fw.get_subject(subject_id)
         subject_id = subject.label
-    log.debug("subject_id %s", subject_id)
+        log.debug(
+            "Got subject_id from destination's parent's subject's label:  %s",
+            subject_id,
+        )
 
     subject_dir = Path(SUBJECTS_DIR / subject_id)
     work_dir = gtk_context.output_dir / subject_id
@@ -621,7 +625,10 @@ def main(gtk_context):
                     e = "gear-dry-run is set: Command was NOT run."
                     log.warning(e)
                     warnings.append(e)
-                    pretend_it_ran(gtk_context)
+                    if not subject_dir.exists():
+                        subject_dir.mkdir()
+                        with open(subject_dir / "afile.txt", "w") as afp:
+                            afp.write("Nothing to see here.")
                     METADATA["analysis"]["info"]["dry_run"] = {
                         "How dry I am": "Say to Mister Temperance youre through"
                     }
@@ -675,15 +682,18 @@ def main(gtk_context):
         gtk_context.manifest["name"]
         + f"_{subject_id}_{gtk_context.destination['id']}.zip"
     )
-    zip_output(
-        str(gtk_context.output_dir), subject_id, zip_file_name,
-    )
+    if subject_dir.exists():
+        log.info("Saving %s in %s as output", subject_id, SUBJECTS_DIR)
+        zip_output(str(gtk_context.output_dir), subject_id, zip_file_name)
+
+    else:
+        log.error("Could not find %s in %s", subject_id, SUBJECTS_DIR)
 
     # clean up: remove output that was zipped
-    output_analysisid_dir = gtk_context.output_dir / subject_id
-    if output_analysisid_dir.exists():
-        log.debug('removing output directory "%s"', str(output_analysisid_dir))
-        output_analysisid_dir.unlink()
+    if work_dir.exists():
+        os.system("ls *")
+        log.debug('removing output directory "%s"', str(work_dir))
+        work_dir.unlink()
     else:
         log.info("Output directory does not exist so it cannot be removed")
 

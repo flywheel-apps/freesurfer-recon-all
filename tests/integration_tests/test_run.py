@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import shutil
+import zipfile
 from pathlib import Path
 from unittest import TestCase
 
@@ -18,6 +19,9 @@ log = logging.getLogger(__name__)
 
 
 ANATOMICAL_STR = "anatomical is '/flywheel/v0/input/anatomical/dicoms/1.2.826.0.1.3680043.8.498.81096423295716363709677774784503056177.MR.dcm'"
+DRY_FILE = (
+    "/flywheel/v0/output/freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip"
+)
 
 
 def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
@@ -39,13 +43,19 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
 
         # print("run.METADATA", json.dumps(run.METADATA, indent=4))
 
-        with open("/flywheel/v0/output/.metadata.json", "r") as fff:
-            metadata = json.load(fff)
-
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
         assert search_sysout(captured, "Warning: gear-dry-run is set")
         assert search_sysout(captured, "Gear succeeded on first try!")
+
+        # make sure file in subject directory made it
+        with zipfile.ZipFile(DRY_FILE) as zf:
+            dry_run_file_contents = zf.read(zf.namelist()[0])
+        log.debug("dry_run_file_contents = %s", dry_run_file_contents)
+        assert dry_run_file_contents == b"Nothing to see here."
+
+        with open("/flywheel/v0/output/.metadata.json", "r") as fff:
+            metadata = json.load(fff)
         assert "How dry I am" in metadata["analysis"]["info"]["dry_run"]
         assert (
             "Whole_hippocampus"
