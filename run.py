@@ -8,11 +8,11 @@ import zipfile
 from pathlib import Path
 
 import flywheel_gear_toolkit
+import pandas as pd
 from flywheel_gear_toolkit.interfaces.command_line import exec_command
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
 
-from utils.dry_run import pretend_it_ran
 from utils.fly.despace import despace
 from utils.fly.make_file_name_safe import make_file_name_safe
 
@@ -43,13 +43,14 @@ def set_core_count(config, log):
     if n_cpus:
         del config["n_cpus"]
         if n_cpus > os_cpu_count:
-            log.warning("n_cpus > number available, using %d", os_cpu_count)
+            log.warning("n_cpus > number available, using max %d", os_cpu_count)
             config["openmp"] = os_cpu_count
-        elif n_cpus == 0:
-            log.info("n_cpus == 0, using %d (maximum available)", os_cpu_count)
-            config["openmp"] = os_cpu_count
+        else:
+            log.info("n_cpus using %d from config", n_cpus)
+            config["openmp"] = n_cpus
     else:  # Default is to use all cpus available
         config["openmp"] = os_cpu_count  # zoom zoom
+        log.info("using n_cpus = %d (maximum available)", os_cpu_count)
 
 
 def check_for_previous_run(log):
@@ -243,7 +244,31 @@ def generate_command(subject_id, command_config, log):
     return command
 
 
-def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
+def remove_i_args(command):
+    """Remove -i <path> arguments from command.
+
+    Args:
+        command (list of str): the command to run recon-all
+
+    Returns:
+        resume_command (list of str): same as command but without -i <arg>
+    """
+
+    resume_command = []
+
+    skip_arg = False
+    for arg in command:
+        if arg == "-i":
+            skip_arg = True  # and don't append
+        elif skip_arg:
+            skip_arg = False  # it is hereby skipped
+        else:
+            resume_command.append(arg)
+
+    return resume_command
+
+
+def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadata, log):
     """Run segmentHA_T1.sh and convert results to .csv files
 
     Args:
@@ -251,6 +276,7 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
         mri_dir (str): the "mri" directory in the subject directory
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -267,6 +293,7 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
         "rh.amygNucVolumes-T1.v21.txt",
     ]
     for tf in txt_files:
+        tablefile = f"{OUTPUT_DIR}/{subject_id}_{tf.replace('.txt','.csv')}"
         cmd = [
             "tr",
             "' '",
@@ -274,14 +301,26 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, log):
             "<",
             f"{mri_dir}/{tf}",
             ">",
-            f"{OUTPUT_DIR}/{subject_id}_{tf.replace('.txt','.csv')}",
+            tablefile,
         ]
         exec_command(
             cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True
         )
 
+        # add those stats to metadata on the destination analysis container
+        if Path(tablefile).exists():
+            log.info("%s exists.  Adding to metadata.", tablefile)
+            stats_df = pd.read_csv(tablefile, names=["struc", "measure"])
+            dft = stats_df.transpose()
+            dft.columns = dft.iloc[0]
+            dft = dft[1:]
+            stats_json = dft.drop(dft.columns[0], axis=1).to_dict("records")[0]
+            metadata["analysis"]["info"][f"{tf.replace('.txt','')}"] = stats_json
+        else:
+            log.info("%s is missing", tablefile)
 
-def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
+
+def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata, log):
     """Run quantifyBrainstemStructures.sh and convert output to .csv.
 
     Args:
@@ -289,6 +328,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
         mri_dir (str): the "mri" directory in the subject directory
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -298,6 +338,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
     log.info("Starting segmentation of brainstem subfields...")
     cmd = ["segmentBS.sh", subject_id]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+    tablefile = f"{OUTPUT_DIR}/{subject_id}_brainstemSsVolumes.v2.csv"
     cmd = [
         "quantifyBrainstemStructures.sh",
         f"{mri_dir}/brainstemSsVolumes.v2.txt",
@@ -310,9 +351,15 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log):
         "<",
         f"{mri_dir}/brainstemSsVolumes.v2.txt",
         ">",
-        f"{OUTPUT_DIR}/{subject_id}_brainstemSsVolumes.v2.csv",
+        tablefile,
     ]
     exec_command(cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True)
+
+    # add those stats to metadata on the destination analysis container
+    if Path(tablefile).exists():
+        stats_df = pd.read_csv(tablefile)
+        stats_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict("records")[0]
+        metadata["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
@@ -433,13 +480,14 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
-def do_gear_convert_stats(subject_id, dry_run, environ, log):
+def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
     """Write aseg stats to a table.
 
     Args:
         subject_id (str): Freesurfer subject directory name
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -447,21 +495,31 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
     """
 
     log.info("Exporting stats files csv...")
+    tablefile = f"{OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv"
     cmd = [
         "asegstats2table",
         "-s",
         subject_id,
         "--delimiter",
         "comma",
-        f"--tablefile={OUTPUT_DIR}/{subject_id}_aseg_stats_vol_mm3.csv",
+        f"--tablefile={tablefile}",
     ]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+
+    # add those stats to metadata on the destination analysis container
+    if Path(tablefile).exists():
+        aseg_stats_df = pd.read_csv(tablefile)
+        as_json = aseg_stats_df.drop(aseg_stats_df.columns[0], axis=1).to_dict(
+            "records"
+        )[0]
+        metadata["analysis"]["info"]["aseg_stats_vol_mm3"] = as_json
 
     # Parse the aparc files and write to table
     hemi = ["lh", "rh"]
     parc = ["aparc.a2009s", "aparc", "aparc.DKTatlas", "aparc.pial"]
     for hh in hemi:
         for pp in parc:
+            tablefile = f"{OUTPUT_DIR}/{subject_id}_{hh}_{pp}_stats_area_mm2.csv"
             cmd = [
                 "aparcstats2table",
                 "-s",
@@ -469,25 +527,40 @@ def do_gear_convert_stats(subject_id, dry_run, environ, log):
                 f"--hemi={hh}",
                 f"--delimiter=comma",
                 f"--parc={pp}",
-                f"--tablefile={OUTPUT_DIR}/{subject_id}_{hh}_{pp}"
-                + "_stats_area_mm2.csv",
+                f"--tablefile={tablefile}",
             ]
             exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+
+            if Path(tablefile).exists():
+                aparc_stats_df = pd.read_csv(tablefile)
+                ap_json = aparc_stats_df.drop(
+                    aparc_stats_df.columns[0], axis=1
+                ).to_dict("records")[0]
+                metadata["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
 
 
 def main(gtk_context):
 
-    fw = gtk_context.client
+    config = gtk_context.config
 
+    # Setup basic logging and log the configuration for this job
+    if config["gear-log-level"] == "INFO":
+        gtk_context.init_logging("info")
+    else:
+        gtk_context.init_logging("debug")
+    gtk_context.log_config()
     log = gtk_context.log
 
-    config = gtk_context.config
+    fw = gtk_context.client
+
     dry_run = config.get("gear-dry-run")
 
     # Keep a list of errors and warning to print all in one place at end of log
     # Any errors will prevent the command from running and will cause exit(1)
     errors = []
     warnings = []
+
+    metadata = {"analysis": {"info": {}}}
 
     set_core_count(config, log)
 
@@ -518,11 +591,24 @@ def main(gtk_context):
     install_freesurfer_license(gtk_context, LICENSE_FILE)
 
     subject_id = config.get("subject_id")
-    if not subject_id:
+    if subject_id:
+        log.debug("Got subject_id from config: %s", subject_id)
+    else:
         subject_id = fw.get_analysis(gtk_context.destination["id"]).parents.subject
         subject = fw.get_subject(subject_id)
         subject_id = subject.label
-    log.debug("subject_id %s", subject_id)
+        log.debug(
+            "Got subject_id from destination's parent's subject's label:  %s",
+            subject_id,
+        )
+    new_subject_id = make_file_name_safe(subject_id)
+    if new_subject_id != subject_id:
+        log.warning(
+            "'%s' has non-file-name-safe characters in it!  That is not okay.",
+            subject_id,
+        )
+        subject_id = new_subject_id
+    log.info("Using '%s' as subject_id", subject_id)
 
     subject_dir = Path(SUBJECTS_DIR / subject_id)
     work_dir = gtk_context.output_dir / subject_id
@@ -531,103 +617,146 @@ def main(gtk_context):
 
     command = generate_command(subject_id, command_config, log)
 
+    num_tries = 0
     return_code = 0
 
-    try:
-
-        if len(errors) > 0:
-            log.info("Command was NOT run because of previous errors.")
-            return_code = 1
-
-        else:
-
-            if dry_run:
-                e = "gear-dry-run is set: Command was NOT run."
-                log.warning(e)
-                warnings.append(e)
-                pretend_it_ran(gtk_context)
-
-            else:
-                # This is what it is all about
-                exec_command(command, environ=environ, shell=True, cont_output=True)
-
-            # Optional Segmentations
-            mri_dir = f"{subject_dir}/mri"
-
-            if config.get("gear-hippocampal_subfields"):
-                do_gear_hippocampal_subfields(
-                    subject_id, mri_dir, dry_run, environ, log
-                )
-
-            if config.get("gear-brainstem_structures"):
-                do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, log)
-
-            if config.get("gear-register_surfaces"):
-                do_gear_register_surfaces(subject_id, dry_run, environ, log)
-
-            if config.get("gear-convert_surfaces"):
-                do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
-
-            if config.get("gear-convert_volumes"):
-                do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
-
-            if config.get("gear-convert_stats"):
-                do_gear_convert_stats(subject_id, dry_run, environ, log)
-
-    except RuntimeError as exc:
-        errors.append(exc)
-        log.critical(exc)
-        log.exception("Unable to execute command.")
+    if len(errors) > 0:
+        log.info("Command was NOT run because of previous errors.")
         return_code = 1
 
-    finally:
+    else:
 
-        # Cleanup, move all results to the output directory
+        didnt_run_yet = True
+        while num_tries < 2 and didnt_run_yet:
 
-        # zip entire output/<subject_id> folder into
-        #  <gear_name>_<subject_id>_<analysis.id>.zip
-        zip_file_name = (
-            gtk_context.manifest["name"]
-            + f"_{subject_id}_{gtk_context.destination['id']}.zip"
-        )
-        zip_output(
-            str(gtk_context.output_dir), subject_id, zip_file_name,
-        )
+            return_code = 0
 
-        # clean up: remove output that was zipped
-        output_analysisid_dir = gtk_context.output_dir / subject_id
-        if output_analysisid_dir.exists():
-            log.debug('removing output directory "%s"', str(output_analysisid_dir))
-            output_analysisid_dir.unlink()
-        else:
-            log.info("Output directory does not exist so it cannot be removed")
+            try:
+                num_tries += 1
 
-        # Report errors and warnings at the end of the log so they can be easily seen.
-        if len(warnings) > 0:
-            msg = "Previous warnings:\n"
-            for err in warnings:
-                if str(type(err)).split("'")[1] == "str":
-                    # show string
-                    msg += "  Warning: " + str(err) + "\n"
-                else:  # show type (of warning) and warning message
-                    err_type = str(type(err)).split("'")[1]
-                    msg += f"  {err_type}: {str(err)}\n"
-            log.info(msg)
+                if dry_run:
+                    e = "gear-dry-run is set: Command was NOT run."
+                    log.warning(e)
+                    warnings.append(e)
+                    if not subject_dir.exists():
+                        subject_dir.mkdir()
+                        with open(subject_dir / "afile.txt", "w") as afp:
+                            afp.write("Nothing to see here.")
+                    metadata = {
+                        "analysis": {
+                            "info": {
+                                "dry_run": {
+                                    "How dry I am": "Say to Mister Temperance...."
+                                }
+                            }
+                        }
+                    }
 
-        if len(errors) > 0:
-            msg = "Previous errors:\n"
-            for err in errors:
-                if str(type(err)).split("'")[1] == "str":
-                    # show string
-                    msg += "  Error msg: " + str(err) + "\n"
-                else:  # show type (of error) and error message
-                    err_type = str(type(err)).split("'")[1]
-                    msg += f"  {err_type}: {str(err)}\n"
-            log.info(msg)
+                # This is what it is all about
+                exec_command(
+                    command,
+                    environ=environ,
+                    dry_run=dry_run,
+                    shell=True,
+                    cont_output=True,
+                )
 
-        gtk_context.log.info("%s Gear is done.  Returning 0", CONTAINER)
+                # Optional Segmentations
+                mri_dir = f"{subject_dir}/mri"
 
-        sys.exit(return_code)
+                if config.get("gear-hippocampal_subfields"):
+                    do_gear_hippocampal_subfields(
+                        subject_id, mri_dir, dry_run, environ, metadata, log
+                    )
+
+                if config.get("gear-brainstem_structures"):
+                    do_gear_brainstem_structures(
+                        subject_id, mri_dir, dry_run, environ, metadata, log
+                    )
+
+                if config.get("gear-register_surfaces"):
+                    do_gear_register_surfaces(subject_id, dry_run, environ, log)
+
+                if config.get("gear-convert_surfaces"):
+                    do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
+
+                if config.get("gear-convert_volumes"):
+                    do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
+
+                if config.get("gear-convert_stats"):
+                    do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
+
+                didnt_run_yet = False  #  If here, no error so it did run
+
+            except RuntimeError as exc:
+                errors.append(exc)
+                log.critical(exc)
+                log.exception("Unable to execute command.")
+                return_code = 1
+                command = remove_i_args(command)  # try again with -i <arg> removed
+
+    # zip entire output/<subject_id> folder into
+    #  <gear_name>_<subject_id>_<analysis.id>.zip
+    zip_file_name = (
+        gtk_context.manifest["name"]
+        + f"_{subject_id}_{gtk_context.destination['id']}.zip"
+    )
+    if subject_dir.exists():
+        log.info("Saving %s in %s as output", subject_id, SUBJECTS_DIR)
+        zip_output(str(gtk_context.output_dir), subject_id, zip_file_name)
+
+    else:
+        log.error("Could not find %s in %s", subject_id, SUBJECTS_DIR)
+
+    # clean up: remove output that was zipped
+    if work_dir.exists():
+        log.debug('removing output directory "%s"', str(work_dir))
+        work_dir.unlink()
+    else:
+        log.info("Output directory does not exist so it cannot be removed")
+
+    # Report errors and warnings at the end of the log so they can be easily seen.
+    if len(warnings) > 0:
+        msg = "Previous warnings:\n"
+        for err in warnings:
+            if str(type(err)).split("'")[1] == "str":
+                # show string
+                msg += "  Warning: " + str(err) + "\n"
+            else:  # show type (of warning) and warning message
+                err_type = str(type(err)).split("'")[1]
+                msg += f"  {err_type}: {str(err)}\n"
+        log.info(msg)
+
+    if len(errors) > 0:
+        msg = "Previous errors:\n"
+        for err in errors:
+            if str(type(err)).split("'")[1] == "str":
+                # show string
+                msg += "  Error msg: " + str(err) + "\n"
+            else:  # show type (of error) and error message
+                err_type = str(type(err)).split("'")[1]
+                msg += f"  {err_type}: {str(err)}\n"
+        log.info(msg)
+
+    destination_id = gtk_context.destination["id"]
+    if len(metadata["analysis"]["info"]) > 0:
+        with open(f"{gtk_context.output_dir}/.metadata.json", "w") as fff:
+            json.dump(metadata, fff)
+        log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
+    else:
+        log.info("No data available to save in .metadata.json.")
+    log.debug(".metadata.json: %s", json.dumps(metadata, indent=4))
+
+    news = "succeeded" if return_code == 0 else "failed"
+
+    if num_tries == 1:
+        log.info("Gear %s on first try!", news)
+    else:
+        log.info("Gear %s on second attempt.", news)
+
+    log.info("%s is done.  Returning %d", CONTAINER, return_code)
+
+    sys.exit(return_code)
 
 
 if __name__ == "__main__":
