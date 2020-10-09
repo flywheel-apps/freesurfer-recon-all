@@ -358,7 +358,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata
     # add those stats to metadata on the destination analysis container
     if Path(tablefile).exists():
         stats_df = pd.read_csv(tablefile)
-        stats_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict("r")[0]
+        stats_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict("records")[0]
         metadata["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
@@ -509,7 +509,9 @@ def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
     # add those stats to metadata on the destination analysis container
     if Path(tablefile).exists():
         aseg_stats_df = pd.read_csv(tablefile)
-        as_json = aseg_stats_df.drop(aseg_stats_df.columns[0], axis=1).to_dict("r")[0]
+        as_json = aseg_stats_df.drop(aseg_stats_df.columns[0], axis=1).to_dict(
+            "records"
+        )[0]
         metadata["analysis"]["info"]["aseg_stats_vol_mm3"] = as_json
 
     # Parse the aparc files and write to table
@@ -533,7 +535,7 @@ def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
                 aparc_stats_df = pd.read_csv(tablefile)
                 ap_json = aparc_stats_df.drop(
                     aparc_stats_df.columns[0], axis=1
-                ).to_dict("r")[0]
+                ).to_dict("records")[0]
                 metadata["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
 
 
@@ -743,7 +745,7 @@ def main(gtk_context):
         log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
     else:
         log.info("No data available to save in .metadata.json.")
-    log.info(".metadata.json: %s", json.dumps(metadata, indent=4))
+    log.debug(".metadata.json: %s", json.dumps(metadata, indent=4))
 
     news = "succeeded" if return_code == 0 else "failed"
 
