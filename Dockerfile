@@ -9,8 +9,6 @@ RUN (curl -sL https://rpm.nodesource.com/setup_12.x | bash -) \
   && yum clean all -y \
   && npm install npm --global
 
-RUN npm install -g bids-validator@1.5.4
-
 RUN source $FREESURFER_HOME/SetUpFreeSurfer.sh
 
 # extra segmentations require matlab compiled runtime
