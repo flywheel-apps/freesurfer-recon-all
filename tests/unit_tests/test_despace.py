@@ -24,8 +24,8 @@ def test_despace_works(capsys, tmp_path):
     despace(tmp_path / DIRS[0])
 
     found = list(Path(tmp_path / DIRS[0]).rglob("*"))
-    # for ff in found:
-    #    print(ff)
+    for ff in found:
+        print(ff)
 
     assert found[0].name == "a_dir_with_spaces"
-    assert found[2].name == "afile_with_spaces"
+    assert found[1].name == "afile_with_spaces"
