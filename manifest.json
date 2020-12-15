@@ -2,12 +2,12 @@
   "name": "freesurfer-recon-all",
   "label": "FreeSurfer 7.1.1: run recon-all",
   "description": "FreeSurfer version 7.1.1 Release (July 27, 2020). This gear takes an anatomical NIfTI file and performs all of the FreeSurfer cortical reconstruction process. Outputs are provided in a zip file and include the entire output directory tree from Recon-All. Configuration options exist for setting the subject ID and for converting outputs to NIfTI, OBJ, and CSV. FreeSurfer is a software package for the analysis and visualization of structural and functional neuroimaging data from cross-sectional or longitudinal studies. It is developed by the Laboratory for Computational Neuroimaging at the Athinoula A. Martinos Center for Biomedical Imaging. Please see https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense for license information.",
-  "version": "1.0.0_7.1.1",
+  "version": "1.0.1_7.1.1",
   "custom": {
-    "docker-image": "flywheel/freesurfer-recon-all:1.0.0_7.1.1",
+    "docker-image": "flywheel/freesurfer-recon-all:1.0.1_7.1.1",
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/freesurfer-recon-all:1.0.0_7.1.1"
+      "image": "flywheel/freesurfer-recon-all:1.0.1_7.1.1"
     },
     "flywheel": {
       "suite": "FreeSurfer"
@@ -107,6 +107,11 @@
       "description": "Command line options to the recon-all algorithm. (Default='-all -qcache'). By default we enable '-all' and '-qcache'. '-all' runs the entire pipeline and '-qcache' will resample data onto the average subject (called fsaverage) and smooth it at various FWHM (full-width/half-max) values, usually 0, 5, 10, 15, 20, and 25mm, which can speed later processing. Note that modification of these options may result in failure if the options are not recognized.",
       "default": "-all -qcache",
       "type": "string"
+    },
+    "gtmseg": {
+      "type": "boolean",
+      "default": false,
+      "description": "After running recon-all run gtmseg on the subject. (Default=False)."
     },
     "gear-hippocampal_subfields": {
       "description": "Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. Choosing this option will write <subject_id>_HippocampalSubfields.csv to the final results. See: https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfields for more info. (Default=true)",

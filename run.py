@@ -539,6 +539,24 @@ def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
                 metadata["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
 
 
+def do_gtmseg(subject_id, dry_run, environ, log):
+    """After running recon-all, gtmseg can be run on the subject to create a high-resolution segmentation.
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.  Output will be in the Freesurfer subject directory.
+    """
+
+    log.info("Running gtmseg...")
+    cmd = ["gtmseg", "--s", subject_id]
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+
+
 def main(gtk_context):
 
     config = gtk_context.config
@@ -685,6 +703,9 @@ def main(gtk_context):
 
                 if config.get("gear-convert_stats"):
                     do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
+
+                if config.get("gtmseg"):
+                    do_gtmseg(subject_id, dry_run, environ, log)
 
                 didnt_run_yet = False  #  If here, no error so it did run
 
