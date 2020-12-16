@@ -75,7 +75,7 @@ Command line option to run recon-all in parallel. By default, it instructs the b
 
 Command line options to the recon-all algorithm.  By default we enable '-all' and '-qcache'. '-all' runs the entire pipeline and '-qcache' will resample data onto the average subject (called fsaverage) and smooth it at various FWHM (full-width/half-max) values, usually 0, 5, 10, 15, 20, and 25mm, which can speed later processing. Note that modification of these options may result in failure if the options are not recognized.  (Default='-all -qcache')
 
-### gtmseg (optional)
+### gear-gtmseg (optional)
 
 After running recon-all, run gtmseg on the subject. (Default=False). This creates a high-resolution segmentation (gtmseg.mgz). This should take about an hour or two. gtmseg.mgz will use aseg.mgz for subcortical structures, ?h.aparc.annot for cortical structures, and will estimate some extra-cerebral structures.
 

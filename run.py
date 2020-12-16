@@ -704,7 +704,7 @@ def main(gtk_context):
                 if config.get("gear-convert_stats"):
                     do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
 
-                if config.get("gtmseg"):
+                if config.get("gear-gtmseg"):
                     do_gtmseg(subject_id, dry_run, environ, log)
 
                 didnt_run_yet = False  #  If here, no error so it did run
