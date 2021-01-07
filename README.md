@@ -39,11 +39,11 @@ Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical st
 
 ### gear-convert_surfaces (optional)
 
-Convert selected surfaces in subject/surf to obj in output.  (Default = true)
+Convert selected surfaces in subject/surf to obj in output.  This allows the surfaces to be readily viewed on the Flywheel platform.  (Default = true)
 
 ### gear-convert_volumes (optional)
 
-Convert selected FreeSurfer volume files (mgz) to NIfTI format. (Default=true)
+Convert selected FreeSurfer volume files (mgz) to NIfTI format. This allows the volumes to be readily viewed on the Flywheel platform.  (Default=true)
 
 ### gear-dry-run (optional)
 Do everything except actually execute recon-all.  This is useful for debugging.  (Default = false)
@@ -77,7 +77,7 @@ Command line options to the recon-all algorithm.  By default we enable '-all' an
 
 ### gear-gtmseg (optional)
 
-After running recon-all, run gtmseg on the subject. (Default=False). This creates a high-resolution segmentation (gtmseg.mgz). This should take about an hour or two. gtmseg.mgz will use aseg.mgz for subcortical structures, ?h.aparc.annot for cortical structures, and will estimate some extra-cerebral structures.
+After running recon-all, run gtmseg on the subject. This creates a high-resolution segmentation (gtmseg.mgz). This should take about an hour or two. gtmseg.mgz will use aseg.mgz for subcortical structures, ?h.aparc.annot for cortical structures, and will estimate some extra-cerebral structures.  (Default=False).
 
 ### subject_id (optional)
 

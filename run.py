@@ -363,7 +363,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata
 
 
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
-    """Runs xhemireg ands urfreg.
+    """Runs xhemireg and surfreg.
 
     Args:
         subject_id (str): Freesurfer subject directory name
@@ -469,6 +469,9 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         ]
     if config.get("gear-brainstem_structures"):
         mri_mgz_files += ["brainstemSsLabels.v12.FSvoxelSpace.mgz"]
+    if config.get("gear-gtmseg"):
+        mri_mgz_files += ["gtmseg.mgz"]
+
     for ff in mri_mgz_files:
         cmd = [
             "mri_convert",
@@ -698,14 +701,14 @@ def main(gtk_context):
                 if config.get("gear-convert_surfaces"):
                     do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
 
+                if config.get("gear-gtmseg"):
+                    do_gtmseg(subject_id, dry_run, environ, log)
+
                 if config.get("gear-convert_volumes"):
                     do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
                 if config.get("gear-convert_stats"):
                     do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
-
-                if config.get("gear-gtmseg"):
-                    do_gtmseg(subject_id, dry_run, environ, log)
 
                 didnt_run_yet = False  #  If here, no error so it did run
 
