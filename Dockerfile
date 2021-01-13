@@ -11,8 +11,12 @@ RUN (curl -sL https://rpm.nodesource.com/setup_12.x | bash -) \
 
 RUN source $FREESURFER_HOME/SetUpFreeSurfer.sh
 
-# extra segmentations require matlab compiled runtime
+# Extra segmentations require matlab compiled runtime
 RUN fs_install_mcr R2014b
+
+# Fix known race condition bug introduced in 7.1.1
+# https://www.mail-archive.com/freesurfer@nmr.mgh.harvard.edu/msg68263.html
+RUN sed -i.bak '4217 s/^/#/' $FREESURFER_HOME/bin/recon-all
 
 # Save environment so it can be passed in when running recon-all.
 ENV PYTHONUNBUFFERED 1
