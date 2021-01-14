@@ -224,9 +224,6 @@ def generate_command(subject_id, command_config, log):
         command.append("-subjid")
         command.append(subject_id)
 
-    if "subject_id" in command_config:  # this was already handled
-        command_config.pop("subject_id")
-
     # add configuration parameters to the command
     for key, val in command_config.items():
         # print(f"key:{key} val:{val} type:{type(val)}")
@@ -362,6 +359,47 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata
         metadata["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
+def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log):
+    """Run segmentThalamicNuclei.sh and convert output to .csv.
+
+    Note:
+        Using an additional FGATIR or DBS scan has not yet been implement here.
+        See: https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        mri_dir (str): the "mri" directory in the subject directory
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
+
+    log.info("Starting segmentation of thalamic nuclei...")
+    cmd = ["segmentThalamicNuclei.sh", subject_id]
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+    tablefile = f"{OUTPUT_DIR}/{subject_id}_ThalamicNuclei.v12.T1.volumes.csv"
+    cmd = [
+        "tr",
+        "' '",
+        ",",
+        "<",
+        f"{mri_dir}/ThalamicNuclei.v12.T1.volumes.txt",
+        ">",
+        tablefile,
+    ]
+    exec_command(cmd, environ=environ, shell=True, dry_run=dry_run, cont_output=True)
+
+    # add those stats to metadata on the destination analysis container
+    if Path(tablefile).exists():
+        stats_df = pd.read_csv(tablefile)
+        stats_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict("records")[0]
+        metadata["analysis"]["info"]["ThalamicNuclei.v12.T1.volumes"] = stats_json
+
+
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
     """Runs xhemireg and surfreg.
 
@@ -471,6 +509,10 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         mri_mgz_files += ["brainstemSsLabels.v12.FSvoxelSpace.mgz"]
     if config.get("gear-gtmseg"):
         mri_mgz_files += ["gtmseg.mgz"]
+    if config.get("gear-thalamic-nuclei"):
+        mri_mgz_files += [
+            "ThalamicNuclei.v12.T1.mgz, ThalamicNuclei.v12.T1.FSvoxelSpace.mgz"
+        ]
 
     for ff in mri_mgz_files:
         cmd = [
@@ -600,8 +642,12 @@ def main(gtk_context):
     for key, val in config.items():
         if not key.startswith("gear-"):
             command_config[key] = val
-    # print("command_config:", json.dumps(command_config, indent=4))
 
+    expert_path = gtk_context.get_input_path("expert")
+    if expert_path:
+        command_config["expert"] = expert_path
+
+    # print("command_config:", json.dumps(command_config, indent=4))
     # Validate the command parameter dictionary - make sure everything is
     # ready to run so errors will appear before launching the actual gear
     # code.  Add descriptions of problems to errors & warnings lists.
@@ -635,6 +681,9 @@ def main(gtk_context):
     work_dir = gtk_context.output_dir / subject_id
     if not work_dir.is_symlink():
         work_dir.symlink_to(subject_dir)
+
+    if "subject_id" in command_config:  # this was already handled
+        command_config.pop("subject_id")
 
     command = generate_command(subject_id, command_config, log)
 
@@ -692,6 +741,11 @@ def main(gtk_context):
 
                 if config.get("gear-brainstem_structures"):
                     do_gear_brainstem_structures(
+                        subject_id, mri_dir, dry_run, environ, metadata, log
+                    )
+
+                if config.get("gear-thalamic-nuclei"):
+                    do_gear_thalamic_nuclei(
                         subject_id, mri_dir, dry_run, environ, metadata, log
                     )
 

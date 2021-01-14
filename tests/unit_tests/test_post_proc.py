@@ -121,3 +121,21 @@ def test_gtmseg_dry_run_works(caplog, search_caplog, print_caplog):
     print_caplog(caplog)
 
     assert search_caplog(caplog, "gtmseg --s sub-TOME3024")
+
+
+def test_do_gear_thalamic_nuclei_dry_run_works(caplog, search_caplog, print_caplog):
+
+    caplog.set_level(logging.DEBUG)
+
+    with open("/tmp/gear_environ.json", "r") as f:
+        environ = json.load(f)
+
+    metadata = {"analysis": {"info": {}}}
+
+    mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
+
+    run.do_gear_thalamic_nuclei("sub-TOME3024", mri_dir, True, environ, metadata, log)
+
+    print_caplog(caplog)
+
+    assert search_caplog(caplog, "segmentThalamicNuclei.sh sub-TOME3024")
