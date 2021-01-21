@@ -771,7 +771,7 @@ def main(gtk_context):
                 if config.get("gear-convert_stats"):
                     do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
 
-                didnt_run_yet = False  #  If here, no error so it did run
+                didnt_run_yet = False  # If here, no error so it did run
 
             except RuntimeError as exc:
                 errors.append(exc)
@@ -823,7 +823,6 @@ def main(gtk_context):
                 msg += f"  {err_type}: {str(err)}\n"
         log.info(msg)
 
-    destination_id = gtk_context.destination["id"]
     if len(metadata["analysis"]["info"]) > 0:
         with open(f"{gtk_context.output_dir}/.metadata.json", "w") as fff:
             json.dump(metadata, fff)

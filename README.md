@@ -3,7 +3,7 @@ Gear that runs FreeSurfer [v7.1.1 Release (July 27, 2020)](https://surfer.nmr.mg
 
 To run this gear you need to select structural MRI file(s) as inputs and set configuration parameters.  Minimally, the "anatomical" input file and a Freesurfer license need to be provided.
 
-Note: the current version of Freesurfer has an known issue with using the `-parallel` flag:  Recon-all will fail stochastically.  Recon-all will be retried if it fails the first time.
+Note: the current version of Freesurfer has known issues with using the `-parallel` flag that caused recon-all to fail stochastically.  These have been patched in this gear.  In case there are more, recon-all will be retried if it fails the first time.
 
 # Inputs
 
@@ -13,14 +13,14 @@ Note: the current version of Freesurfer has an known issue with using the `-para
 
 Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive.
 
+### Expert Options File (optional)
+A user-created file containing special options to include in the command string. The file should contain as the first item the name of the command, and the items following it on rest of the line will be passed as the extra options.  See [Freesurfer documentation](https://surfer.nmr.mgh.harvard.edu/fswiki/recon-all#ExpertOptionsFile) for more information and examples.
+
 ### freesurfer_license (optional)
 A license is required for this gear to run but it does not have to be provided as an input file.
 There are [three ways](https://docs.flywheel.io/hc/en-us/articles/360013235453-How-to-include-a-Freesurfer-license-file-in-order-to-run-the-fMRIPrep-gear-) to provide the license to this gear.
 [Obtaining a license is free](https://surfer.nmr.mgh.harvard.edu/registration.html).
-If you select a file here, it will by copied into the $FSHOME directory when the gear runs before launching recon-all.
-
-### Expert Options File (optional)
-A user-created file containing special options to include in the command string. The file should contain as the first item the name of the command, and the items following it on rest of the line will be passed as the extra options.  See [Freesurfer documentation](https://surfer.nmr.mgh.harvard.edu/fswiki/recon-all#ExpertOptionsFile) for more information and examples.
+If you select a file here, it will be copied into the $FSHOME directory when the gear runs before launching recon-all.
 
 ### t1w_anatomical_2 .. t1w_anatomical_5 (optional)
 Additional anatomical NIfTI files.  These will be averaged together to provide for better motion correction.
@@ -80,7 +80,7 @@ Command line option to run recon-all in parallel. By default, it instructs the b
 
 ### reconall_options (required)
 
-Command line options to the recon-all algorithm.  By default we enable '-all' and '-qcache'. '-all' runs the entire pipeline and '-qcache' will resample data onto the average subject (called fsaverage) and smooth it at various FWHM (full-width/half-max) values, usually 0, 5, 10, 15, 20, and 25mm, which can speed later processing. Note that modification of these options may result in failure if the options are not recognized.  (Default='-all -qcache')
+Command line options to the recon-all algorithm.  By default we enable '-all' and '-qcache'. '-all' runs the entire pipeline and '-qcache' will resample data onto the average subject (called fsaverage) and smooth it at various FWHM (full-width/half-max) values, usually 0, 5, 10, 15, 20, and 25mm, which can speed later processing. Note that modification of these options will result in failure if the options are not recognized.  (Default='-all -qcache')
 
 ### gear-gtmseg (optional)
 
@@ -94,6 +94,7 @@ Desired subject ID. This is used to name the resulting FreeSurfer output directo
 This gear runs recon-all on the provided inputs with the given configuration options.  See [https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki](https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki) in general and [https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable](https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable) in particular for complete details.
 
 # Outputs
-All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.
+All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.  See the tutorial "Introduction to Freesurfer Output" tutorial [here](https://surfer.nmr.mgh.harvard.edu/fswiki/Tutorials) for details.:w
+
 
 This gear was created using the [bdis-app-template](https://github.com/flywheel-apps/bids-app-template).  For documentation on how to run the tests in this gear, please see that README file.
