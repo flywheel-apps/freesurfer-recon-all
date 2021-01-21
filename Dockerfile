@@ -16,7 +16,11 @@ RUN fs_install_mcr R2014b
 
 # Fix known race condition bug introduced in 7.1.1
 # https://www.mail-archive.com/freesurfer@nmr.mgh.harvard.edu/msg68263.html
-RUN sed -i.bak '4217 s/^/#/' $FREESURFER_HOME/bin/recon-all
+# RUN sed -i.bak '4217 s/^/#/' $FREESURFER_HOME/bin/recon-all
+# The above line is already in patched recon-all along with 2nd -parallel fix
+# https://www.mail-archive.com/freesurfer@nmr.mgh.harvard.edu/msg68878.html
+RUN mv $FREESURFER_HOME/bin/recon-all $FREESURFER_HOME/bin/recon-all.bak
+COPY patch/recon-all $FREESURFER_HOME/bin/recon-all
 
 # Fix known bug by swapping in updated script
 # See https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei
