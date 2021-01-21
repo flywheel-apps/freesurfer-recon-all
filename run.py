@@ -395,9 +395,15 @@ def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log
 
     # add those stats to metadata on the destination analysis container
     if Path(tablefile).exists():
-        stats_df = pd.read_csv(tablefile)
-        stats_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict("records")[0]
+        log.info("%s exists.  Adding to metadata.", tablefile)
+        stats_df = pd.read_csv(tablefile, names=["struc", "measure"])
+        dft = stats_df.transpose()
+        dft.columns = dft.iloc[0]
+        dft = dft[1:]
+        stats_json = dft.drop(dft.columns[0], axis=1).to_dict("records")[0]
         metadata["analysis"]["info"]["ThalamicNuclei.v12.T1.volumes"] = stats_json
+    else:
+        log.info("%s is missing", tablefile)
 
 
 def do_gear_register_surfaces(subject_id, dry_run, environ, log):
