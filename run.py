@@ -511,7 +511,8 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         mri_mgz_files += ["gtmseg.mgz"]
     if config.get("gear-thalamic-nuclei"):
         mri_mgz_files += [
-            "ThalamicNuclei.v12.T1.mgz, ThalamicNuclei.v12.T1.FSvoxelSpace.mgz"
+            "ThalamicNuclei.v12.T1.mgz",
+            "ThalamicNuclei.v12.T1.FSvoxelSpace.mgz",
         ]
 
     for ff in mri_mgz_files:
