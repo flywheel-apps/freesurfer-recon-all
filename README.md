@@ -94,7 +94,7 @@ Desired subject ID. This is used to name the resulting FreeSurfer output directo
 This gear runs recon-all on the provided inputs with the given configuration options.  See [https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki](https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki) in general and [https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable](https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable) in particular for complete details.
 
 # Outputs
-All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.  See the tutorial "Introduction to Freesurfer Output" tutorial [here](https://surfer.nmr.mgh.harvard.edu/fswiki/Tutorials) for details.:w
+All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.  See the tutorial "Introduction to Freesurfer Output" tutorial [here](https://surfer.nmr.mgh.harvard.edu/fswiki/Tutorials) for details.
 
 
 This gear was created using the [bdis-app-template](https://github.com/flywheel-apps/bids-app-template).  For documentation on how to run the tests in this gear, please see that README file.
