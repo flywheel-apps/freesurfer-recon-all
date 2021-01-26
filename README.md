@@ -60,7 +60,7 @@ There are [three ways](https://docs.flywheel.io/hc/en-us/articles/360013235453-H
 
 Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. See: [https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala](https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala) for more info.  Choosing this option will write `<subject_id>_HippocampalSubfields.csv` to the final results.  The values in this spreadsheet will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
 
-### gear-thalamic-nuclei (optional)
+### gear-thalamic_nuclei (optional)
 
 Produce a parcellation of the thalamus into 25 different nuclei, using a probabilistic atlas built with histological data. Choosing this option will produce 3 files in the subject's mri directory: `ThalamicNuclei.v12.T1.volumes.txt`, `ThalamicNuclei.v12.T1.mgz`, and `ThalamicNuclei.v12.T1.FSvoxelSpace.mgz`, and 2 files in the stats directory: `thalamic-nuclei.lh.v12.T1.stats` and `thalamic-nuclei.rh.v12.T1.stats`. See: [https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei](https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei) for more info. (Default=false)
 

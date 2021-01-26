@@ -515,7 +515,7 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         mri_mgz_files += ["brainstemSsLabels.v12.FSvoxelSpace.mgz"]
     if config.get("gear-gtmseg"):
         mri_mgz_files += ["gtmseg.mgz"]
-    if config.get("gear-thalamic-nuclei"):
+    if config.get("gear-thalamic_nuclei"):
         mri_mgz_files += [
             "ThalamicNuclei.v12.T1.mgz",
             "ThalamicNuclei.v12.T1.FSvoxelSpace.mgz",
@@ -751,7 +751,7 @@ def main(gtk_context):
                         subject_id, mri_dir, dry_run, environ, metadata, log
                     )
 
-                if config.get("gear-thalamic-nuclei"):
+                if config.get("gear-thalamic_nuclei"):
                     do_gear_thalamic_nuclei(
                         subject_id, mri_dir, dry_run, environ, metadata, log
                     )
