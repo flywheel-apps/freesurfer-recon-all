@@ -98,3 +98,16 @@ def print_caplog():
             print(f"{ii:2d} {rec}")
 
     return _method
+
+
+@pytest.fixture
+def search_caplog():
+    def _method(caplog, find_me):
+        """Search caplog message for find_me, return message"""
+
+        for msg in caplog.messages:
+            if find_me in msg:
+                return msg
+        return ""
+
+    return _method

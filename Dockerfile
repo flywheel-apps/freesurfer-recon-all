@@ -11,8 +11,21 @@ RUN (curl -sL https://rpm.nodesource.com/setup_12.x | bash -) \
 
 RUN source $FREESURFER_HOME/SetUpFreeSurfer.sh
 
-# extra segmentations require matlab compiled runtime
+# Extra segmentations require matlab compiled runtime
 RUN fs_install_mcr R2014b
+
+# Fix known race condition bug introduced in 7.1.1
+# https://www.mail-archive.com/freesurfer@nmr.mgh.harvard.edu/msg68263.html
+# RUN sed -i.bak '4217 s/^/#/' $FREESURFER_HOME/bin/recon-all
+# The above line is already in patched recon-all along with 2nd -parallel fix
+# https://www.mail-archive.com/freesurfer@nmr.mgh.harvard.edu/msg68878.html
+RUN mv $FREESURFER_HOME/bin/recon-all $FREESURFER_HOME/bin/recon-all.bak
+COPY patch/recon-all $FREESURFER_HOME/bin/recon-all
+
+# Fix known bug by swapping in updated script
+# See https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei
+RUN mv $FREESURFER_HOME/bin/quantifyThalamicNuclei.sh $FREESURFER_HOME/bin/quantifyThalamicNuclei.sh.bak
+COPY patch/quantifyThalamicNuclei.sh $FREESURFER_HOME/bin/quantifyThalamicNuclei.sh
 
 # Save environment so it can be passed in when running recon-all.
 ENV PYTHONUNBUFFERED 1

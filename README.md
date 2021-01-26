@@ -3,7 +3,7 @@ Gear that runs FreeSurfer [v7.1.1 Release (July 27, 2020)](https://surfer.nmr.mg
 
 To run this gear you need to select structural MRI file(s) as inputs and set configuration parameters.  Minimally, the "anatomical" input file and a Freesurfer license need to be provided.
 
-Note: the current version of Freesurfer has an known issue with using the `-parallel` flag:  Recon-all will fail stochastically.  Recon-all will be retried if it fails the first time.
+Note: the current version of Freesurfer has known issues with using the `-parallel` flag that caused recon-all to fail stochastically.  These have been patched in this gear.  In case there are more, recon-all will be retried if it fails the first time.
 
 # Inputs
 
@@ -13,11 +13,14 @@ Note: the current version of Freesurfer has an known issue with using the `-para
 
 Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive.
 
+### Expert Options File (optional)
+A user-created file containing special options to include in the command string. The file should contain as the first item the name of the command, and the items following it on rest of the line will be passed as the extra options.  See [Freesurfer documentation](https://surfer.nmr.mgh.harvard.edu/fswiki/recon-all#ExpertOptionsFile) for more information and examples.
+
 ### freesurfer_license (optional)
 A license is required for this gear to run but it does not have to be provided as an input file.
 There are [three ways](https://docs.flywheel.io/hc/en-us/articles/360013235453-How-to-include-a-Freesurfer-license-file-in-order-to-run-the-fMRIPrep-gear-) to provide the license to this gear.
 [Obtaining a license is free](https://surfer.nmr.mgh.harvard.edu/registration.html).
-If you select a file here, it will by copied into the $FSHOME directory when the gear runs before launching recon-all.
+If you select a file here, it will be copied into the $FSHOME directory when the gear runs before launching recon-all.
 
 ### t1w_anatomical_2 .. t1w_anatomical_5 (optional)
 Additional anatomical NIfTI files.  These will be averaged together to provide for better motion correction.
@@ -31,19 +34,19 @@ Note: arguments that start with "gear-" are not passed to recon-all.  They contr
 
 ### gear-brainstem_structures (optional)
 
-Generate an automated segmentation of four different brainstem structures from the input T1 scan: medulla oblongata, pons, midbrain and superior cerebellar peduncle (SCP).  See: [https://surfer.nmr.mgh.harvard.edu/fswiki/BrainstemSubstructures](https://surfer.nmr.mgh.harvard.edu/fswiki/BrainstemSubstructures) for more info.  Choosing this option will write <subject_id>_brainstemSsVolumes.v2.csv to the final results.  The values in that spreadsheet will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
+Generate an automated segmentation of four different brainstem structures from the input T1 scan: medulla oblongata, pons, midbrain and superior cerebellar peduncle (SCP).  See: [https://surfer.nmr.mgh.harvard.edu/fswiki/BrainstemSubstructures](https://surfer.nmr.mgh.harvard.edu/fswiki/BrainstemSubstructures) for more info.  Choosing this option will write `<subject_id>_brainstemSsVolumes.v2.csv` to the final results.  The values in that spreadsheet will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
 
 ### gear-convert_stats (optional)
 
-Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical stats file created by recon-all and/or mri_segstats (e.g., aseg.stats) into a table in which each line is a subject and each column is a segmentation. The values are the volume of the segmentation in mm3 or the mean intensity over the structure. Also Converts all cortical stats file created by recon-all and or mris_anatomical_stats (e.g., ?h.aparc.stats) into a table in which each line is a subject and each column is a parcellation. By default, the values are the area of the parcellation in mm2.  These tables will be written to .csv files that will be available in the final results.  The values in the tables will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
+Convert FreeSurfer stats files to CSV. (Default=true). Converts a subcortical stats file created by recon-all and/or mri_segstats (e.g., `aseg.stats`) into a table in which each line is a subject and each column is a segmentation. The values are the volume of the segmentation in mm3 or the mean intensity over the structure. Also Converts all cortical stats file created by recon-all and or mris_anatomical_stats (e.g., `?h.aparc.stats`) into a table in which each line is a subject and each column is a parcellation. By default, the values are the area of the parcellation in mm2.  These tables will be written to .csv files that will be available in the final results.  The values in the tables will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
 
 ### gear-convert_surfaces (optional)
 
-Convert selected surfaces in subject/surf to obj in output.  (Default = true)
+Convert selected surfaces in subject/surf to obj in output.  This allows the surfaces to be readily viewed on the Flywheel platform.  (Default = true)
 
 ### gear-convert_volumes (optional)
 
-Convert selected FreeSurfer volume files (mgz) to NIfTI format. (Default=true)
+Convert selected FreeSurfer volume files (mgz) to NIfTI format. This allows the volumes to be readily viewed on the Flywheel platform.  (Default=true)
 
 ### gear-dry-run (optional)
 Do everything except actually execute recon-all.  This is useful for debugging.  (Default = false)
@@ -55,7 +58,11 @@ There are [three ways](https://docs.flywheel.io/hc/en-us/articles/360013235453-H
 
 ### gear-hippocampal_subfields (optional)
 
-Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. See: [https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala](https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala) for more info.  Choosing this option will write <subject_id>_HippocampalSubfields.csv to the final results.  The values in this spreadsheet will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
+Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. See: [https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala](https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala) for more info.  Choosing this option will write `<subject_id>_HippocampalSubfields.csv` to the final results.  The values in this spreadsheet will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
+
+### gear-thalamic_nuclei (optional)
+
+Produce a parcellation of the thalamus into 25 different nuclei, using a probabilistic atlas built with histological data. Choosing this option will produce 3 files in the subject's mri directory: `ThalamicNuclei.v12.T1.volumes.txt`, `ThalamicNuclei.v12.T1.mgz`, and `ThalamicNuclei.v12.T1.FSvoxelSpace.mgz`, and 2 files in the stats directory: `thalamic-nuclei.lh.v12.T1.stats` and `thalamic-nuclei.rh.v12.T1.stats`. See: [https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei](https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei) for more info. (Default=false)
 
 ### gear-log-level (optional)
 Gear Log verbosity level (INFO|DEBUG)
@@ -73,7 +80,11 @@ Command line option to run recon-all in parallel. By default, it instructs the b
 
 ### reconall_options (required)
 
-Command line options to the recon-all algorithm.  By default we enable '-all' and '-qcache'. '-all' runs the entire pipeline and '-qcache' will resample data onto the average subject (called fsaverage) and smooth it at various FWHM (full-width/half-max) values, usually 0, 5, 10, 15, 20, and 25mm, which can speed later processing. Note that modification of these options may result in failure if the options are not recognized.  (Default='-all -qcache')
+Command line options to the recon-all algorithm.  By default we enable '-all' and '-qcache'. '-all' runs the entire pipeline and '-qcache' will resample data onto the average subject (called fsaverage) and smooth it at various FWHM (full-width/half-max) values, usually 0, 5, 10, 15, 20, and 25mm, which can speed later processing. Note that modification of these options will result in failure if the options are not recognized.  (Default='-all -qcache')
+
+### gear-gtmseg (optional)
+
+After running recon-all, run gtmseg on the subject. This creates a high-resolution segmentation `gtmseg.mgz`. This should take about an hour or two. `gtmseg.mgz` will use `aseg.mgz` for subcortical structures, `?h.aparc.annot` for cortical structures, and will estimate some extra-cerebral structures.  (Default=False).
 
 ### subject_id (optional)
 
@@ -83,6 +94,7 @@ Desired subject ID. This is used to name the resulting FreeSurfer output directo
 This gear runs recon-all on the provided inputs with the given configuration options.  See [https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki](https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki) in general and [https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable](https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable) in particular for complete details.
 
 # Outputs
-All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.
+All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.  See the tutorial "Introduction to Freesurfer Output" tutorial [here](https://surfer.nmr.mgh.harvard.edu/fswiki/Tutorials) for details.
+
 
 This gear was created using the [bdis-app-template](https://github.com/flywheel-apps/bids-app-template).  For documentation on how to run the tests in this gear, please see that README file.

@@ -48,6 +48,7 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
         assert excinfo.value.code == 0
         assert search_sysout(captured, "Warning: gear-dry-run is set")
         assert search_sysout(captured, "Gear succeeded on first try!")
+        assert search_sysout(captured, "gtmseg --s TOME_3024")
 
         # make sure file in subject directory made it
         with zipfile.ZipFile(DRY_FILE) as zf:

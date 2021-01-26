@@ -1,3 +1,3 @@
 pandas
 flywheel-sdk~=14.5.0
-flywheel-gear-toolkit~=0.1.1
+flywheel-gear-toolkit~=0.1.3
