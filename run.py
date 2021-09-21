@@ -359,6 +359,36 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata
         metadata["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
+def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, command_config, log):
+    """Run mri_segment_hypothalamic_subunits.sh
+
+    Note:
+        running on a single, unprocessed T1 is not supported here.
+        See: https://surfer.nmr.mgh.harvard.edu/fswiki/HypothalamicSubunits
+        The posteriors are not saved in this run to improve execution time
+
+    Args:
+        subject_id (str): Freesurfer subject directory name
+        mri_dir (str): the "mri" directory in the subject directory
+        dry_run (boolean): actually do it or do everything but
+        environ (dict): shell environment saved in Dockerfile
+        metadata (dict): will be written to .metadata.json when gear finishes
+        log (GearToolkitContext.log): logger set up by Gear Toolkit
+
+    Returns:
+        Nothing.
+    """
+
+    log.info("Starting Segmentation of hypothalamic subunits...")
+    threads = command_config["openmp"]
+    cmd = ["mri_segment_hypothalamic_subunits", '--s', subject_id,  "--threads", threads]
+    exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+
+    # These files are also created:
+    # "hypothalamic_subunits_volumes.v1.csv",
+    # "hypothalamic_subunits_volumes.v1.stats",
+
+
 def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log):
     """Run segmentThalamicNuclei.sh and convert output to .csv.
 
@@ -520,6 +550,13 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
             "ThalamicNuclei.v12.T1.mgz",
             "ThalamicNuclei.v12.T1.FSvoxelSpace.mgz",
         ]
+
+    if config.get("gear-hypothalamic_subunits"):
+        mri_mgz_files += [
+            "hypothalamic_subunits_seg.v1.mgz",
+            "hypothalamic_subunits_posteriors.v1.mgz"
+        ]
+
 
     for ff in mri_mgz_files:
         cmd = [
@@ -754,6 +791,11 @@ def main(gtk_context):
                 if config.get("gear-thalamic_nuclei"):
                     do_gear_thalamic_nuclei(
                         subject_id, mri_dir, dry_run, environ, metadata, log
+                    )
+
+                if config.get("gear-hypothalamic_subunits"):
+                    do_gear_hypothalamic_subunits(
+                        subject_id, mri_dir, dry_run, environ, metadata, command_config, log,
                     )
 
                 if config.get("gear-register_surfaces"):
