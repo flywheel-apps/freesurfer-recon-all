@@ -1,4 +1,4 @@
-FROM freesurfer/freesurfer:7.1.1 as base
+FROM freesurfer/freesurfer:7.2.0 as base
 
 LABEL maintainer="support@flywheel.io"
 
@@ -69,4 +69,7 @@ COPY run.py ${FLYWHEEL}/run.py
 
 # Configure entrypoint
 RUN chmod a+x ${FLYWHEEL}/run.py
-ENTRYPOINT ["/flywheel/v0/run.py"]
+
+
+ENTRYPOINT ["/bin/bash"]
+#ENTRYPOINT ["/flywheel/v0/run.py"]
