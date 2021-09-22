@@ -369,10 +369,9 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, command_config, 
 
     Args:
         subject_id (str): Freesurfer subject directory name
-        mri_dir (str): the "mri" directory in the subject directory
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
-        metadata (dict): will be written to .metadata.json when gear finishes
+        command_config (dict): will be written to .metadata.json when gear finishes
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -385,8 +384,8 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, command_config, 
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
     # These files are also created:
-    # "hypothalamic_subunits_volumes.v1.csv",
-    # "hypothalamic_subunits_volumes.v1.stats",
+    # "/mri/hypothalamic_subunits_volumes.v1.csv",
+    # "/stats/hypothalamic_subunits_volumes.v1.stats",
 
 
 def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log):
@@ -554,7 +553,6 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
     if config.get("gear-hypothalamic_subunits"):
         mri_mgz_files += [
             "hypothalamic_subunits_seg.v1.mgz",
-            "hypothalamic_subunits_posteriors.v1.mgz"
         ]
 
 
