@@ -380,7 +380,7 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, command_config, 
 
     log.info("Starting Segmentation of hypothalamic subunits...")
     threads = command_config["openmp"]
-    cmd = ["mri_segment_hypothalamic_subunits", '--s', subject_id,  "--threads", threads]
+    cmd = ["mri_segment_hypothalamic_subunits", '--s', str(subject_id),  "--threads", str(threads)]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
     # These files are also created:
@@ -793,7 +793,7 @@ def main(gtk_context):
 
                 if config.get("gear-hypothalamic_subunits"):
                     do_gear_hypothalamic_subunits(
-                        subject_id, mri_dir, dry_run, environ, metadata, command_config, log,
+                        subject_id, dry_run, environ, command_config, log,
                     )
 
                 if config.get("gear-register_surfaces"):
