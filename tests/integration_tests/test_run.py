@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 METADATA = {"analysis": {"info": {}}}
 ANATOMICAL_STR = "anatomical is '/flywheel/v0/input/anatomical/dicoms/1.2.826.0.1.3680043.8.498.81096423295716363709677774784503056177.MR.dcm'"
 DRY_FILE = (
-    "/flywheel/v0/output/freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip"
+    "/flywheel/v0/output/freesurfer-recon-all_sub-42_615380e1d60fb18f02bfd0ce.zip"
 )
 
 
@@ -30,8 +30,14 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
         TestCase.skipTest("", f"No API key available in {str(user_json)}")
+    with open(user_json) as json_file:
+        data = json.load(json_file)
+        if "ga" not in data["key"]:
+            TestCase.skipTest("", "Not logged in to ga.")
 
-    install_gear("dry_run.zip")
+    install_gear(
+        "dry_run.zip"
+    )  # ga.ce.flywheel.io bids-apps/bids-testing-scratch sub-42 ses-02
 
     with flywheel_gear_toolkit.GearToolkitContext(input_args=[]) as gtk_context:
 
@@ -42,13 +48,11 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
         captured = capfd.readouterr()
         print_captured(captured)
 
-        # print("run.METADATA", json.dumps(run.METADATA, indent=4))
-
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
         assert search_sysout(captured, "Warning: gear-dry-run is set")
         assert search_sysout(captured, "Gear succeeded on first try!")
-        assert search_sysout(captured, "gtmseg --s TOME_3024")
+        assert search_sysout(captured, "gtmseg --s sub-42")
 
         # make sure file in subject directory made it
         with zipfile.ZipFile(DRY_FILE) as zf:
@@ -154,7 +158,7 @@ def test_dcm_zip_works(capfd, search_sysout, install_gear, print_captured):
 def test_wet_run_fails(capfd, search_sysout, install_gear, print_captured):
 
     # clean up after previous tests so this one will run
-    shutil.rmtree("/usr/local/freesurfer/subjects/TOME_3024")
+    shutil.rmtree("/usr/local/freesurfer/subjects/sub-42")
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
