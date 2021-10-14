@@ -642,6 +642,7 @@ def do_gtmseg(subject_id, dry_run, environ, log):
     cmd = ["gtmseg", "--s", subject_id]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
+
 def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metadata={}):
     """ execute the recon_all command
 
@@ -669,6 +670,7 @@ def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metad
     num_tries = 0
     errors = []
     warnings = []
+
     while num_tries < 2:
 
         return_code = 0
@@ -737,8 +739,10 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
     """
 
     num_tries = 0
+
     errors = []
     while num_tries < 2:
+        return_code = 0
 
         try:
             num_tries += 1
@@ -789,7 +793,6 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
             return_code = 1
 
     return errors, return_code, metadata
-
 
 
 def main(gtk_context):
