@@ -359,7 +359,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata
         metadata["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
-def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, command_config, log):
+def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, threads, log):
     """Run mri_segment_hypothalamic_subunits.sh
 
     Note:
@@ -371,7 +371,7 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, command_config, 
         subject_id (str): Freesurfer subject directory name
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
-        command_config (dict): will be written to .metadata.json when gear finishes
+        threads (int): number of threads to run on
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
@@ -379,7 +379,6 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, command_config, 
     """
 
     log.info("Starting Segmentation of hypothalamic subunits...")
-    threads = command_config["openmp"]
     cmd = ["mri_segment_hypothalamic_subunits", '--s', str(subject_id),  "--threads", str(threads)]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
@@ -644,6 +643,158 @@ def do_gtmseg(subject_id, dry_run, environ, log):
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
+def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metadata={}):
+    """ execute the recon_all command
+
+    Given a command generated from `generate_command()`, attempt to execute recon all.
+    This function provides the correct metadata required for a "dry-run" of the gear
+    and includes a retry routine.
+
+    Args:
+        command (list): a list of command parameters to be called
+        environ (dict): environmental variables required to run recon-all
+        dry_run (bool): determines if this will be a dry run of the command or not.
+        subject_dir (Path): the location of the subject directory to save recon-all output to
+        log: (GearToolkitContext.log): logger set up by Gear Toolkit
+        metadata (dict): when a dry-run is performed, a metadata dict is generated for later
+        gear function
+
+    Returns:
+        errors (list): a list of errors encountered when attempting to run
+        warnings (list): a list of warnings
+        return_code (int): determines if we completed successfully (0) or with errors (1)
+        metadata (dict): the same metadata dict from input, only modified if dry-run is True
+
+    """
+
+    num_tries = 0
+    errors = []
+    warnings = []
+
+    while num_tries < 2:
+
+        return_code = 0
+
+        try:
+            num_tries += 1
+
+            if dry_run:
+                e = "gear-dry-run is set: Command was NOT run."
+                log.warning(e)
+                warnings.append(e)
+                if not subject_dir.exists():
+                    subject_dir.mkdir()
+                    with open(subject_dir / "afile.txt", "w") as afp:
+                        afp.write("Nothing to see here.")
+                metadata = {
+                    "analysis": {
+                        "info": {
+                            "dry_run": {
+                                "How dry I am": "Say to Mister Temperance...."
+                            }
+                        }
+                    }
+                }
+
+            # This is what it is all about
+            exec_command(
+                command,
+                environ=environ,
+                dry_run=dry_run,
+                shell=True,
+                cont_output=True,
+            )
+            break
+
+        except RuntimeError as exc:
+            errors.append(exc)
+            log.critical(exc)
+            log.exception("Unable to execute command.")
+            return_code = 1
+            command = remove_i_args(command)  # try again with -i <arg> removed
+
+    return errors, warnings, return_code, metadata
+
+
+def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_dir, log, metadata={}):
+    """ execute post processing commands
+
+    attempts to run post-processing routines on a completed recon-all direectory.
+
+    Args:
+        config (dict): the gear config settings
+        environ (dict): environmental variables required to run recon-all
+        dry_run (bool): determines if this will be a dry run of the command or not.
+        subject_id (str): the subject ID to use in this process
+        subject_dir (Path): the location of the subject directory to save recon-all output to
+        log: (GearToolkitContext.log): logger set up by Gear Toolkit
+        metadata (dict): when a dry-run is performed, a metadata dict is generated for later
+        gear function
+
+    Returns:
+        errors (list): a list of errors encountered when attempting to run
+        return_code (int): determines if we completed successfully (0) or with errors (1)
+        metadata (dict): the same metadata dict from input, only modified if dry-run is True
+
+    """
+
+    num_tries = 0
+
+    errors = []
+    while num_tries < 2:
+        return_code = 0
+
+        try:
+            num_tries += 1
+            # Optional Segmentations
+            mri_dir = f"{subject_dir}/mri"
+
+            if config.get("gear-hippocampal_subfields"):
+                do_gear_hippocampal_subfields(
+                    subject_id, mri_dir, dry_run, environ, metadata, log
+                )
+
+            if config.get("gear-brainstem_structures"):
+                do_gear_brainstem_structures(
+                    subject_id, mri_dir, dry_run, environ, metadata, log
+                )
+
+            if config.get("gear-thalamic_nuclei"):
+                do_gear_thalamic_nuclei(
+                    subject_id, mri_dir, dry_run, environ, metadata, log
+                )
+
+            if config.get("gear-hypothalamic_subunits"):
+                do_gear_hypothalamic_subunits(
+                    subject_id, dry_run, environ, config["openmp"], log,
+                )
+
+            if config.get("gear-register_surfaces"):
+                do_gear_register_surfaces(subject_id, dry_run, environ, log)
+
+            if config.get("gear-convert_surfaces"):
+                do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
+
+            if config.get("gear-gtmseg"):
+                do_gtmseg(subject_id, dry_run, environ, log)
+
+            if config.get("gear-convert_volumes"):
+                do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
+
+            if config.get("gear-convert_stats"):
+                do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
+
+            break  # If here, no error so it did run
+
+        except RuntimeError as exc:
+            errors.append(exc)
+            log.critical(exc)
+            log.exception("Unable to execute command.")
+            return_code = 1
+
+    return errors, return_code, metadata
+
+
 def main(gtk_context):
 
     config = gtk_context.config
@@ -727,9 +878,11 @@ def main(gtk_context):
     if "subject_id" in command_config:  # this was already handled
         command_config.pop("subject_id")
 
+
+        pass
+
     command = generate_command(subject_id, command_config, log)
 
-    num_tries = 0
     return_code = 0
 
     if len(errors) > 0:
@@ -738,87 +891,16 @@ def main(gtk_context):
 
     else:
 
-        didnt_run_yet = True
-        while num_tries < 2 and didnt_run_yet:
+        if not config.get('gear-postprocessing-only'):
+            ra_errors, ra_warnings, ra_return_code, metadata = execute_recon_all_command(command, environ, dry_run, subject_dir, metadata)
+            errors.extend(ra_errors)
+            warnings.extend(ra_warnings)
+            return_code = ra_return_code
 
-            return_code = 0
-
-            try:
-                num_tries += 1
-
-                if dry_run:
-                    e = "gear-dry-run is set: Command was NOT run."
-                    log.warning(e)
-                    warnings.append(e)
-                    if not subject_dir.exists():
-                        subject_dir.mkdir()
-                        with open(subject_dir / "afile.txt", "w") as afp:
-                            afp.write("Nothing to see here.")
-                    metadata = {
-                        "analysis": {
-                            "info": {
-                                "dry_run": {
-                                    "How dry I am": "Say to Mister Temperance...."
-                                }
-                            }
-                        }
-                    }
-
-                # This is what it is all about
-                exec_command(
-                    command,
-                    environ=environ,
-                    dry_run=dry_run,
-                    shell=True,
-                    cont_output=True,
-                )
-
-                # Optional Segmentations
-                mri_dir = f"{subject_dir}/mri"
-
-                if config.get("gear-hippocampal_subfields"):
-                    do_gear_hippocampal_subfields(
-                        subject_id, mri_dir, dry_run, environ, metadata, log
-                    )
-
-                if config.get("gear-brainstem_structures"):
-                    do_gear_brainstem_structures(
-                        subject_id, mri_dir, dry_run, environ, metadata, log
-                    )
-
-                if config.get("gear-thalamic_nuclei"):
-                    do_gear_thalamic_nuclei(
-                        subject_id, mri_dir, dry_run, environ, metadata, log
-                    )
-
-                if config.get("gear-hypothalamic_subunits"):
-                    do_gear_hypothalamic_subunits(
-                        subject_id, dry_run, environ, command_config, log,
-                    )
-
-                if config.get("gear-register_surfaces"):
-                    do_gear_register_surfaces(subject_id, dry_run, environ, log)
-
-                if config.get("gear-convert_surfaces"):
-                    do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
-
-                if config.get("gear-gtmseg"):
-                    do_gtmseg(subject_id, dry_run, environ, log)
-
-                if config.get("gear-convert_volumes"):
-                    do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
-
-                if config.get("gear-convert_stats"):
-                    do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
-
-                didnt_run_yet = False  # If here, no error so it did run
-
-            except RuntimeError as exc:
-                errors.append(exc)
-                log.critical(exc)
-                log.exception("Unable to execute command.")
-                return_code = 1
-                command = remove_i_args(command)  # try again with -i <arg> removed
+        if return_code == 0:
+            post_errors, post_return_code, metadata = execute_postprocesing_command(config, environ, dry_run, subject_id, subject_dir, log, metadata)
+            errors.extend(post_errors)
+            return_code = post_return_code
 
     # zip entire output/<subject_id> folder into
     #  <gear_name>_<subject_id>_<analysis.id>.zip
