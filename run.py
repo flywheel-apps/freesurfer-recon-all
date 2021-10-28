@@ -290,7 +290,7 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadat
         "rh.amygNucVolumes-T1.v21.txt",
     ]
     for tf in txt_files:
-        tablefile = f"{OUTPUT_DIR}/{subject_id}_{tf.replace('.txt','.csv')}"
+        tablefile = f"{OUTPUT_DIR}/{subject_id}_{tf.replace('.txt', '.csv')}"
         cmd = [
             "tr",
             "' '",
@@ -312,7 +312,7 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadat
             dft.columns = dft.iloc[0]
             dft = dft[1:]
             stats_json = dft.drop(dft.columns[0], axis=1).to_dict("records")[0]
-            metadata["analysis"]["info"][f"{tf.replace('.txt','')}"] = stats_json
+            metadata["analysis"]["info"][f"{tf.replace('.txt', '')}"] = stats_json
         else:
             log.info("%s is missing", tablefile)
 
@@ -379,12 +379,12 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, threads, log):
     """
 
     log.info("Starting Segmentation of hypothalamic subunits...")
-    cmd = ["mri_segment_hypothalamic_subunits", '--s', str(subject_id),  "--threads", str(threads)]
+    cmd = ["mri_segment_hypothalamic_subunits", '--s', str(subject_id), "--threads", str(threads)]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
     # These files are also created:
     # "/mri/hypothalamic_subunits_volumes.v1.csv",
-    # "/stats/hypothalamic_subunits_volumes.v1.stats",
+    # "/stats/hypothalamic_subunits_volumes.v1.stats"
 
 
 def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log):
@@ -553,7 +553,6 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         mri_mgz_files += [
             "hypothalamic_subunits_seg.v1.mgz",
         ]
-
 
     for ff in mri_mgz_files:
         cmd = [
@@ -738,6 +737,8 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
 
     """
 
+
+
     num_tries = 0
 
     errors = []
@@ -796,7 +797,6 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
 
 
 def main(gtk_context):
-
     config = gtk_context.config
 
     # Setup basic logging and log the configuration for this job
@@ -878,7 +878,6 @@ def main(gtk_context):
     if "subject_id" in command_config:  # this was already handled
         command_config.pop("subject_id")
 
-
         pass
 
     command = generate_command(subject_id, command_config, log)
@@ -892,21 +891,25 @@ def main(gtk_context):
     else:
 
         if not config.get('gear-postprocessing-only'):
-            ra_errors, ra_warnings, ra_return_code, metadata = execute_recon_all_command(command, environ, dry_run, subject_dir, metadata)
+            ra_errors, ra_warnings, ra_return_code, metadata = execute_recon_all_command(command, environ, dry_run,
+                                                                                         subject_dir, log, metadata)
             errors.extend(ra_errors)
             warnings.extend(ra_warnings)
             return_code = ra_return_code
 
         if return_code == 0:
-            post_errors, post_return_code, metadata = execute_postprocesing_command(config, environ, dry_run, subject_id, subject_dir, log, metadata)
+
+            post_errors, post_return_code, metadata = execute_postprocesing_command(config, environ, dry_run,
+                                                                                    subject_id, subject_dir, log,
+                                                                                    metadata)
             errors.extend(post_errors)
             return_code = post_return_code
 
     # zip entire output/<subject_id> folder into
     #  <gear_name>_<subject_id>_<analysis.id>.zip
     zip_file_name = (
-        gtk_context.manifest["name"]
-        + f"_{subject_id}_{gtk_context.destination['id']}.zip"
+            gtk_context.manifest["name"]
+            + f"_{subject_id}_{gtk_context.destination['id']}.zip"
     )
     if subject_dir.exists():
         log.info("Saving %s in %s as output", subject_id, SUBJECTS_DIR)
@@ -955,18 +958,12 @@ def main(gtk_context):
 
     news = "succeeded" if return_code == 0 else "failed"
 
-    if num_tries == 1:
-        log.info("Gear %s on first try!", news)
-    else:
-        log.info("Gear %s on second attempt.", news)
-
     log.info("%s is done.  Returning %d", CONTAINER, return_code)
 
     sys.exit(return_code)
 
 
 if __name__ == "__main__":
-
     gear_toolkit_context = flywheel_gear_toolkit.GearToolkitContext()
 
     main(gear_toolkit_context)
