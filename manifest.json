@@ -176,6 +176,11 @@
       "description": "Text from license file generated during FreeSurfer registration. *Entries should be space separated*",
       "type": "string",
       "optional": true
+    },
+    "gear-postprocessing-only": {
+      "default": false,
+      "description": "If a previous recon-all .zip file is given as input, do not re-run recon-all, instead only run the additional post-processing commands",
+      "type": "boolean"
     }
   },
   "environment": {
