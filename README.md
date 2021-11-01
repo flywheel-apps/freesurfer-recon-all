@@ -1,9 +1,10 @@
 # freesurfer-recon-all
-Gear that runs FreeSurfer [v7.1.1 Release (July 27, 2020)](https://surfer.nmr.mgh.harvard.edu/fswiki/ReleaseNotes) based on the official FS docker container.
+Gear that runs FreeSurfer [v7.2.0 Release (July 19, 2021)](https://surfer.nmr.mgh.harvard.edu/fswiki/ReleaseNotes) based on the official FS docker container.
 
 To run this gear you need to select structural MRI file(s) as inputs and set configuration parameters.  Minimally, the "anatomical" input file and a Freesurfer license need to be provided.
 
-Note: the current version of Freesurfer has known issues with using the `-parallel` flag that caused recon-all to fail stochastically.  These have been patched in this gear.  In case there are more, recon-all will be retried if it fails the first time.
+Note: Known issues: it was recently discovered there may be some inaccuracies in the talairach registration (subject/mri/talairach.xfm) when a volume has been defaced and the face voxels are replaced with 0s. We have found some problems in the 1000 Functional Connectomes anatomical data where the defacing is very aggressive. No problems were found in the UK BioBank data. Mostly, this is not relevant, but it can affect the estimated intracranial volume (eTIV) which can then affect group results
+when volume or surface area are being corrected by eTIV. This was discovered by comparing the eTIV from version 5.3 with that of versions 6.0 and 7.X.
 
 # Inputs
 
@@ -11,7 +12,7 @@ Note: the current version of Freesurfer has known issues with using the `-parall
 
 ### anatomical (required)
 
-Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive.
+Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive (required for gear-postprocessing-only option).
 
 ### Expert Options File (optional)
 A user-created file containing special options to include in the command string. The file should contain as the first item the name of the command, and the items following it on rest of the line will be passed as the extra options.  See [Freesurfer documentation](https://surfer.nmr.mgh.harvard.edu/fswiki/recon-all#ExpertOptionsFile) for more information and examples.
@@ -56,6 +57,10 @@ Text from license file generated during FreeSurfer registration.
 Copy the contents of the license file and paste it into this argument.
 There are [three ways](https://docs.flywheel.io/hc/en-us/articles/360013235453-How-to-include-a-Freesurfer-license-file-in-order-to-run-the-fMRIPrep-gear-) to provide the license to this gear.
 
+### gear-hypothalamic_subunits (optional)
+
+After running recon-all run Segmentation of hypothalamic subunits (mri_segment_hypothalamic_subunits) on the subject. See: [https://surfer.nmr.mgh.harvard.edu/fswiki/HypothalamicSubunits](https://surfer.nmr.mgh.harvard.edu/fswiki/HypothalamicSubunits) For more information.
+
 ### gear-hippocampal_subfields (optional)
 
 Generates an automated segmentation of the hippocampal subfields based on a statistical atlas built primarily upon ultra-high resolution (~0.1 mm isotropic) ex vivo MRI data. See: [https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala](https://surfer.nmr.mgh.harvard.edu/fswiki/HippocampalSubfieldsAndNucleiOfAmygdala) for more info.  Choosing this option will write `<subject_id>_HippocampalSubfields.csv` to the final results.  The values in this spreadsheet will also be attached to the analysis as "Custom Information" ("info" metadata) so they can be found using search and in views.  (Default=true)
@@ -90,11 +95,13 @@ After running recon-all, run gtmseg on the subject. This creates a high-resoluti
 
 Desired subject ID. This is used to name the resulting FreeSurfer output directory.  The subject_id can only have file-name-safe characters (no spaces, special characters, etc.) because this will be used as the name of a directory for the subject.  NOTE: If using a previous Gear output as input the subject code will be parsed from the input archive.
 
+### gear-postprocessing-only (optional)
+Allows post-processing steps (such as gear-hypothalamic_subunits, gear-brainstem_structures, etc) to be run WITHOUT rerunning recon-all.  For this option to work, a completed recon-all output zip file must be passed as input to this gear.
+
 # Workflow
 This gear runs recon-all on the provided inputs with the given configuration options.  See [https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki](https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferWiki) in general and [https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable](https://surfer.nmr.mgh.harvard.edu/fswiki/ReconAllDevTable) in particular for complete details.
 
 # Outputs
 All files that are the results of recon-all in the Freesurfer subject directory are compressed into a single zip archive.  See the tutorial "Introduction to Freesurfer Output" tutorial [here](https://surfer.nmr.mgh.harvard.edu/fswiki/Tutorials) for details.
-
 
 This gear was created using the [bdis-app-template](https://github.com/flywheel-apps/bids-app-template).  For documentation on how to run the tests in this gear, please see that README file.
