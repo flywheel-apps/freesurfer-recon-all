@@ -552,6 +552,8 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
     if config.get("gear-hypothalamic_subunits"):
         mri_mgz_files += [
             "hypothalamic_subunits_seg.v1.mgz",
+            "hypothalamic_subunits_posteriors.v1.mgz",
+
         ]
 
     for ff in mri_mgz_files:
@@ -565,7 +567,7 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
-def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
+def do_gear_convert_stats(subject_id, dry_run, environ, metadata, subject_dir, log):
     """Write aseg stats to a table.
 
     Args:
@@ -622,6 +624,19 @@ def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
                     aparc_stats_df.columns[0], axis=1
                 ).to_dict("records")[0]
                 metadata["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
+
+    if config.get("gear-hypothalamic_subunits"):
+        files_to_copy = [Path(f"{subject_dir}/stats/hypothalamic_subunits_volumes.v1.stats"),
+                         Path(f"{subject_dir}/mri/hypothalamic_subunits_volumes.v1.csv")
+                         ]
+
+        for ff in files_to_copy:
+            cmd = [
+                "cp",
+                ff.as_posix(),
+                f"{OUTPUT_DIR}/{ff.name}",
+            ]
+            exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
 def do_gtmseg(subject_id, dry_run, environ, log):
@@ -783,7 +798,7 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
                 do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
             if config.get("gear-convert_stats"):
-                do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
+                do_gear_convert_stats(subject_id, dry_run, environ, metadata, subject_dir, log)
 
             break  # If here, no error so it did run
 
