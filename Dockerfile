@@ -22,11 +22,6 @@ RUN fs_install_mcr R2014b
 RUN mv $FREESURFER_HOME/bin/recon-all $FREESURFER_HOME/bin/recon-all.bak
 COPY patch/recon-all $FREESURFER_HOME/bin/recon-all
 
-# Fix known bug by swapping in updated script
-# See https://surfer.nmr.mgh.harvard.edu/fswiki/ThalamicNuclei
-RUN mv $FREESURFER_HOME/bin/quantifyThalamicNuclei.sh $FREESURFER_HOME/bin/quantifyThalamicNuclei.sh.bak
-COPY patch/quantifyThalamicNuclei.sh $FREESURFER_HOME/bin/quantifyThalamicNuclei.sh
-
 # Save environment so it can be passed in when running recon-all.
 ENV PYTHONUNBUFFERED 1
 RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'

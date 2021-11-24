@@ -3,9 +3,6 @@ Gear that runs FreeSurfer [v7.2.0 Release (July 19, 2021)](https://surfer.nmr.mg
 
 To run this gear you need to select structural MRI file(s) as inputs and set configuration parameters.  Minimally, the "anatomical" input file and a Freesurfer license need to be provided.
 
-Note: Known issues: it was recently discovered there may be some inaccuracies in the talairach registration (subject/mri/talairach.xfm) when a volume has been defaced and the face voxels are replaced with 0s. We have found some problems in the 1000 Functional Connectomes anatomical data where the defacing is very aggressive. No problems were found in the UK BioBank data. Mostly, this is not relevant, but it can affect the estimated intracranial volume (eTIV) which can then affect group results
-when volume or surface area are being corrected by eTIV. This was discovered by comparing the eTIV from version 5.3 with that of versions 6.0 and 7.X.
-
 # Inputs
 
 ![Inputs](README_img/inputs.png)
