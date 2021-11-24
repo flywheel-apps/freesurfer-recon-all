@@ -51,7 +51,6 @@ def test_dry_run_works(capfd, install_gear, print_captured, search_sysout):
         assert excinfo.type == SystemExit
         assert excinfo.value.code == 0
         assert search_sysout(captured, "Warning: gear-dry-run is set")
-        assert search_sysout(captured, "Gear succeeded on first try!")
         assert search_sysout(captured, "gtmseg --s sub-42")
 
         # make sure file in subject directory made it
@@ -182,5 +181,7 @@ def test_wet_run_fails(capfd, search_sysout, install_gear, print_captured):
             captured,
             "Zipping output file freesurfer-recon-all_TOME_3024_5db3392669d4f3002a16ec4c.zip",
         )
-        assert search_sysout(captured, "Gear failed on second attempt")
+        assert search_sysout(
+            captured, "flywheel-apps/freesurfer-recon-all is done.  Returning 1"
+        )
         assert search_sysout(captured, "time recon-all -subjid TOME_3024 -all")
