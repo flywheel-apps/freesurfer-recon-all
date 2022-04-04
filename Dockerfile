@@ -22,9 +22,8 @@ RUN fs_install_mcr R2014b
 RUN mv $FREESURFER_HOME/bin/recon-all $FREESURFER_HOME/bin/recon-all.bak
 COPY patch/recon-all $FREESURFER_HOME/bin/recon-all
 
-# Save environment so it can be passed in when running recon-all.
-ENV PYTHONUNBUFFERED 1
-RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
+RUN chmod -R a+rX $FREESURFER_HOME; sync && \
+    chmod +rx $FREESURFER_HOME/bin/*; sync
 
 # Install a version of python to run Flywheel code and keep it separate from the
 # python that Freesurfer uses.  Saving the environment above makes sure it is not
@@ -44,14 +43,14 @@ RUN wget \
 
 # Installing precomputed python packages
 RUN conda install -y python=3.8.5 && \
-    chmod -R a+rX /root/miniconda3; sync && \
+    chmod -R a+rX /root; sync && \
     chmod +x /root/miniconda3/bin/*; sync && \
     conda build purge-all; sync && \
     conda clean -tipsy && sync
 
 COPY requirements.txt /tmp
 RUN pip install -r /tmp/requirements.txt && \
-    rm -rf /root/.cache/pip
+    rm -rf /root/.cache/pip /tmp/requirements.txt
 
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
@@ -62,8 +61,13 @@ COPY manifest.json ${FLYWHEEL}/manifest.json
 COPY utils ${FLYWHEEL}/utils
 COPY run.py ${FLYWHEEL}/run.py
 
-# Configure entrypoint
-RUN chmod a+x ${FLYWHEEL}/run.py
+# Save environment so it can be passed in when running recon-all.
+ENV PYTHONUNBUFFERED 1
+RUN python -c 'import os, json; f = open("/flywheel/v0/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
+# Configure entrypoint
+RUN chmod a+rx ${FLYWHEEL}/run.py; sync && \
+    chmod -R a+rX ${FLYWHEEL}/utils; sync && \
+    chmod a+rx ${FLYWHEEL}/manifest.json; sync
 
 ENTRYPOINT ["/flywheel/v0/run.py"]
