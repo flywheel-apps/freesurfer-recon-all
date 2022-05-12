@@ -557,14 +557,17 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         ]
 
     for ff in mri_mgz_files:
-        cmd = [
-            "mri_convert",
-            "-i",
-            f"{mri_dir}/{ff}",
-            "-o",
-            f"{OUTPUT_DIR}/{ff.replace('.mgz', '.nii.gz')}",
-        ]
-        exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
+
+        if Path(f"{mri_dir}/{ff}").exists():
+
+            cmd = [
+                "mri_convert",
+                "-i",
+                f"{mri_dir}/{ff}",
+                "-o",
+                f"{OUTPUT_DIR}/{ff.replace('.mgz', '.nii.gz')}",
+            ]
+            exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
 def do_gear_convert_stats(subject_id, dry_run, environ, metadata, subject_dir, log):
@@ -575,6 +578,7 @@ def do_gear_convert_stats(subject_id, dry_run, environ, metadata, subject_dir, l
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
         metadata (dict): will be written to .metadata.json when gear finishes
+        subject_dir (str): the FS subject directory where the output files are located
         log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
