@@ -570,10 +570,11 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
             exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
-def do_gear_convert_stats(subject_id, dry_run, environ, metadata, subject_dir, log):
+def do_gear_convert_stats(config, subject_id, dry_run, environ, metadata, subject_dir, log):
     """Write aseg stats to a table.
 
     Args:
+        config (GearToolkitContext.config): config dictionary from config.json
         subject_id (str): Freesurfer subject directory name
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
@@ -802,7 +803,7 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
                 do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
 
             if config.get("gear-convert_stats"):
-                do_gear_convert_stats(subject_id, dry_run, environ, metadata, subject_dir, log)
+                do_gear_convert_stats(config, subject_id, dry_run, environ, metadata, subject_dir, log)
 
             break  # If here, no error so it did run
 
