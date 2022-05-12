@@ -6,27 +6,32 @@ import os
 import sys
 import zipfile
 from pathlib import Path
+import pandas as pd
+import shutil
 
 import flywheel_gear_toolkit
-import pandas as pd
 from flywheel_gear_toolkit.interfaces.command_line import exec_command
-from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
 
 from utils.fly.despace import despace
 from utils.fly.make_file_name_safe import make_file_name_safe
 
+from utils.singularity import run_in_tmp_dir
+from utils.freesurfer import install_freesurfer_license
+
+
 GEAR = "freesurfer-recon-all"
 REPO = "flywheel-apps"
 CONTAINER = f"{REPO}/{GEAR}"
 
-FLYWHEEL_BASE = Path("/flywheel/v0")
-OUTPUT_DIR = Path(FLYWHEEL_BASE / "output")
-INPUT_DIR = Path(FLYWHEEL_BASE / "input")
+# globals will be set in __main__
+# FLYWHEEL_BASE = Path("/flywheel/v0")
+# OUTPUT_DIR = Path(FLYWHEEL_BASE / "output")
+# INPUT_DIR = Path(FLYWHEEL_BASE / "input")
+# SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
+# LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
-SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
 FREESURFER_HOME = "/usr/local/freesurfer"
-LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
 
 def set_core_count(config, log):
@@ -37,8 +42,10 @@ def set_core_count(config, log):
         log (GearToolkitContext.log): logger set up by Gear Toolkit
     """
 
-    os_cpu_count = os.cpu_count()
-    log.info("os.cpu_count() = %d", os_cpu_count)
+    # Only use available cpus not all of them
+    # https://docs.python.org/3/library/os.html
+    os_cpu_count = len(os.sched_getaffinity(0))
+    log.info("len(os.sched_getaffinity(0)) = %d", os_cpu_count)
     n_cpus = config.get("n_cpus")
     if n_cpus:
         del config["n_cpus"]
@@ -129,7 +136,7 @@ def get_input_file(log):
 
         anatomical = str(anatomical_list[0])
         if anatomical.endswith(".zip"):
-            dicom_dir = anat_dir / "dicoms"
+            dicom_dir = SUBJECTS_DIR / "dicoms"
             dicom_dir.mkdir()
             unzip_archive(anatomical, dicom_dir)
             despace(dicom_dir)
@@ -831,6 +838,8 @@ def main(gtk_context):
 
     dry_run = config.get("gear-dry-run")
 
+    destination_id = gtk_context.destination["id"]
+
     # Keep a list of errors and warning to print all in one place at end of log
     # Any errors will prevent the command from running and will cause exit(1)
     errors = []
@@ -841,8 +850,11 @@ def main(gtk_context):
     set_core_count(config, log)
 
     # grab environment for gear (saved in Dockerfile)
-    with open("/tmp/gear_environ.json", "r") as f:
+    with open(FLYWHEEL_BASE / "gear_environ.json", "r") as f:
         environ = json.load(f)
+
+        # use our subjects_dir
+        environ['SUBJECTS_DIR'] = str(SUBJECTS_DIR)
 
         # Add environment to log if debugging
         kv = ""
@@ -866,9 +878,19 @@ def main(gtk_context):
     # code.  Add descriptions of problems to errors & warnings lists.
     # print("gtk_context.config:", json.dumps(gtk_context.config, indent=4))
 
-    if Path(LICENSE_FILE).exists():
-        log.debug("%s exists.", LICENSE_FILE)
-    install_freesurfer_license(gtk_context, LICENSE_FILE)
+    environ["FS_LICENSE"] = str(LICENSE_FILE)
+    license_list = list(Path("input/freesurfer_license").glob("*"))
+    if len(license_list) > 0:
+        fs_license_path = license_list[0]
+    else:
+        fs_license_path = ""
+    install_freesurfer_license(
+        str(fs_license_path),
+        config.get("gear-FREESURFER_LICENSE"),
+        gtk_context.client,
+        destination_id,
+        LICENSE_FILE,
+    )
 
     subject_id = config.get("subject_id")
     if subject_id:
@@ -980,10 +1002,44 @@ def main(gtk_context):
 
     log.info("%s is done.  Returning %d", CONTAINER, return_code)
 
-    sys.exit(return_code)
+    return return_code
 
 
 if __name__ == "__main__":
-    gear_toolkit_context = flywheel_gear_toolkit.GearToolkitContext()
 
-    main(gear_toolkit_context)
+    # always run in a newly created "scratch" directory in /tmp/...
+    scratch_dir = run_in_tmp_dir()
+    config_path = scratch_dir / 'config.json'
+
+    # reset globals (poor form changing constants)
+    global FLYWHEEL_BASE
+    global OUTPUT_DIR
+    global INPUT_DIR
+    global SUBJECTS_DIR
+    global LICENSE_FILE
+
+    FLYWHEEL_BASE = scratch_dir
+    OUTPUT_DIR = FLYWHEEL_BASE / "output"
+    INPUT_DIR = FLYWHEEL_BASE / "input"
+    SUBJECTS_DIR = FLYWHEEL_BASE / "fs_subjects"
+    LICENSE_FILE = FLYWHEEL_BASE / "license.txt"
+    SUBJECTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # link everything in existing SUBJECTS_DIR to new one.
+    for fs_subj in Path(os.environ['SUBJECTS_DIR']).glob('*'):
+        (SUBJECTS_DIR / fs_subj.name).symlink_to(fs_subj)
+
+    with flywheel_gear_toolkit.GearToolkitContext(config_path='/flywheel/v0/config.json') as gtk_context:
+        return_code = main(gtk_context)
+
+    # clean up (might be necessary when running in a shared computing environment)
+    for thing in scratch_dir.glob("*"):
+        if thing.is_symlink():
+            thing.unlink()  # don't remove anything links point to
+    shutil.rmtree(scratch_dir)
+    # mkdir and removedirs is needed to not leave trailing tmp directories
+    scratch_dir.mkdir()
+    os.removedirs(scratch_dir)
+
+    sys.exit(return_code)
+
