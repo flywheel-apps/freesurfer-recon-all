@@ -12,9 +12,10 @@ import shutil
 import flywheel_gear_toolkit
 from flywheel_gear_toolkit.interfaces.command_line import exec_command
 from flywheel_gear_toolkit.utils.zip_tools import unzip_archive, zip_output
+from flywheel_gear_toolkit.utils.file import sanitize_filename
 
 from utils.fly.despace import despace
-from utils.fly.make_file_name_safe import make_file_name_safe
+#from utils.fly.make_file_name_safe import make_file_name_safe
 
 from utils.singularity import run_in_tmp_dir
 from utils.freesurfer import install_freesurfer_license
@@ -87,7 +88,7 @@ def check_for_previous_run(log):
             new_subject_id = ""
 
         if new_subject_id != "":
-            new_subject_id = make_file_name_safe(new_subject_id)
+            new_subject_id = sanitize_filename(new_subject_id)
             if not Path(SUBJECTS_DIR / new_subject_id).exists():
                 log.critical("No SUBJECT DIR could be found! Cannot continue. Exiting")
                 sys.exit(1)
@@ -883,7 +884,7 @@ def main(gtk_context):
             "Got subject_id from destination's parent's subject's label:  %s",
             subject_id,
         )
-    new_subject_id = make_file_name_safe(subject_id)
+    new_subject_id = sanitize_filename(subject_id)
     if new_subject_id != subject_id:
         log.warning(
             "'%s' has non-file-name-safe characters in it!  That is not okay.",
