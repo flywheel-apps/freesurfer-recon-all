@@ -37,13 +37,13 @@ CONTAINER = f"{REPO}/{GEAR}"
 
 FREESURFER_HOME = "/usr/local/freesurfer"
 
+log = logging.getLogger(__name__)
 
-def set_core_count(config, log):
+def set_core_count(config):
     """get # cpu's to set -openmp by setting config["openmp"]
 
     Args:
         config (GearToolkitContext.config): config dictionary from config.json
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
     """
 
     # Only use available cpus not all of them
@@ -64,11 +64,10 @@ def set_core_count(config, log):
         log.info("using n_cpus = %d (maximum available)", os_cpu_count)
 
 
-def check_for_previous_run(log):
+def check_for_previous_run():
     """Check for .zip file that contains subject from a previous run.
 
     Args:
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         new_subject_id (str)
@@ -103,13 +102,12 @@ def check_for_previous_run(log):
     return new_subject_id
 
 
-def get_input_file(log):
+def get_input_file():
     """Provide required anatomical file as input to the gear.
 
     Input file can be either a NIfTI file or a DICOM archive.
 
     Args:
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         anatomical (str): path to anatomical file
@@ -160,13 +158,12 @@ def get_input_file(log):
     return anatomical
 
 
-def get_additional_inputs(log):
+def get_additional_inputs():
     """Process additional anatomical inputs.
 
     Additional T1 and T2 input files must all be NIfTI (.nii or .nii.gz)
 
     Args:
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         add_inputs (str): arguments to pass in for additional input files
@@ -201,13 +198,12 @@ def get_additional_inputs(log):
     return add_inputs
 
 
-def generate_command(subject_id, command_config, log):
+def generate_command(subject_id, command_config):
     """Compose the shell command to run recon-all.
 
     Args:
         subject_id (str): Freesurfer subject directory name
         command_config (dict): configuration parameters and values to pass in
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         command (list of str): the command line to be run
@@ -219,17 +215,17 @@ def generate_command(subject_id, command_config, log):
     # 1) re-running a previous run (if .zip file is provided)
     # 2) by providing anatomical files as input to the gear
 
-    new_subject_id = check_for_previous_run(log)
+    new_subject_id = check_for_previous_run()
     if new_subject_id:
         subject_id = new_subject_id
         command.append("-subjid")
         command.append(subject_id)
 
     else:
-        anatomical = get_input_file(log)
+        anatomical = get_input_file()
         command.append("-i")
         command.append(anatomical)
-        add_inputs = get_additional_inputs(log)
+        add_inputs = get_additional_inputs()
         if add_inputs:
             command += add_inputs.split(" ")
         command.append("-subjid")
@@ -276,7 +272,7 @@ def remove_i_args(command):
     return resume_command
 
 
-def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadata, log):
+def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadata):
     """Run segmentHA_T1.sh and convert results to .csv files
 
     Args:
@@ -285,7 +281,6 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadat
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
         metadata (dict): will be written to .metadata.json when gear finishes
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -328,7 +323,7 @@ def do_gear_hippocampal_subfields(subject_id, mri_dir, dry_run, environ, metadat
             log.info("%s is missing", tablefile)
 
 
-def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata, log):
+def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata):
     """Run quantifyBrainstemStructures.sh and convert output to .csv.
 
     Args:
@@ -337,7 +332,6 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
         metadata (dict): will be written to .metadata.json when gear finishes
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -370,7 +364,7 @@ def do_gear_brainstem_structures(subject_id, mri_dir, dry_run, environ, metadata
         metadata["analysis"]["info"]["brainstemSsVolumes.v2"] = stats_json
 
 
-def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, threads, log):
+def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, threads):
     """Run mri_segment_hypothalamic_subunits.sh
 
     Note:
@@ -383,7 +377,6 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, threads, log):
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
         threads (int): number of threads to run on
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -398,7 +391,7 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, threads, log):
     # "/stats/hypothalamic_subunits_volumes.v1.stats"
 
 
-def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log):
+def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata):
     """Run segmentThalamicNuclei.sh and convert output to .csv.
 
     Note:
@@ -411,7 +404,6 @@ def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
         metadata (dict): will be written to .metadata.json when gear finishes
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -445,14 +437,13 @@ def do_gear_thalamic_nuclei(subject_id, mri_dir, dry_run, environ, metadata, log
         log.info("%s is missing", tablefile)
 
 
-def do_gear_register_surfaces(subject_id, dry_run, environ, log):
+def do_gear_register_surfaces(subject_id, dry_run, environ):
     """Runs xhemireg and surfreg.
 
     Args:
         subject_id (str): Freesurfer subject directory name
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -478,14 +469,13 @@ def do_gear_register_surfaces(subject_id, dry_run, environ, log):
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
-def do_gear_convert_surfaces(subject_dir, dry_run, environ, log):
+def do_gear_convert_surfaces(subject_dir, dry_run, environ):
     """Convert selected surfaces in subject/surf to obj in output.
 
     Args:
         subject_dir (str): Full path to Freesurfer subject directory
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -519,7 +509,7 @@ def do_gear_convert_surfaces(subject_dir, dry_run, environ, log):
         )
 
 
-def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
+def do_gear_convert_volumes(config, mri_dir, dry_run, environ):
     """Convert select volumes in subject/mri to nifti.
 
     Args:
@@ -527,7 +517,6 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         mri_dir (str): the "mri" directory in the subject directory
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -576,7 +565,7 @@ def do_gear_convert_volumes(config, mri_dir, dry_run, environ, log):
         exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
-def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
+def do_gear_convert_stats(subject_id, dry_run, environ, metadata):
     """Write aseg stats to a table.
 
     Args:
@@ -584,7 +573,6 @@ def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
         metadata (dict): will be written to .metadata.json when gear finishes
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.
@@ -635,14 +623,13 @@ def do_gear_convert_stats(subject_id, dry_run, environ, metadata, log):
                 metadata["analysis"]["info"][f"{hh}_{pp}_stats_area_mm2"] = ap_json
 
 
-def do_gtmseg(subject_id, dry_run, environ, log):
+def do_gtmseg(subject_id, dry_run, environ):
     """After running recon-all, gtmseg can be run on the subject to create a high-resolution segmentation.
 
     Args:
         subject_id (str): Freesurfer subject directory name
         dry_run (boolean): actually do it or do everything but
         environ (dict): shell environment saved in Dockerfile
-        log (GearToolkitContext.log): logger set up by Gear Toolkit
 
     Returns:
         Nothing.  Output will be in the Freesurfer subject directory.
@@ -653,7 +640,7 @@ def do_gtmseg(subject_id, dry_run, environ, log):
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
 
-def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metadata={}):
+def execute_recon_all_command(command, environ, dry_run, subject_dir, metadata={}):
     """ execute the recon_all command
 
     Given a command generated from `generate_command()`, attempt to execute recon all.
@@ -665,7 +652,6 @@ def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metad
         environ (dict): environmental variables required to run recon-all
         dry_run (bool): determines if this will be a dry run of the command or not.
         subject_dir (Path): the location of the subject directory to save recon-all output to
-        log: (GearToolkitContext.log): logger set up by Gear Toolkit
         metadata (dict): when a dry-run is performed, a metadata dict is generated for later
         gear function
 
@@ -726,7 +712,7 @@ def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metad
     return errors, warnings, return_code, metadata
 
 
-def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_dir, log, metadata={}):
+def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_dir, metadata={}):
     """ execute post processing commands
 
     attempts to run post-processing routines on a completed recon-all direectory.
@@ -737,7 +723,6 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
         dry_run (bool): determines if this will be a dry run of the command or not.
         subject_id (str): the subject ID to use in this process
         subject_dir (Path): the location of the subject directory to save recon-all output to
-        log: (GearToolkitContext.log): logger set up by Gear Toolkit
         metadata (dict): when a dry-run is performed, a metadata dict is generated for later
         gear function
 
@@ -763,38 +748,38 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
 
             if config.get("gear-hippocampal_subfields"):
                 do_gear_hippocampal_subfields(
-                    subject_id, mri_dir, dry_run, environ, metadata, log
+                    subject_id, mri_dir, dry_run, environ, metadata
                 )
 
             if config.get("gear-brainstem_structures"):
                 do_gear_brainstem_structures(
-                    subject_id, mri_dir, dry_run, environ, metadata, log
+                    subject_id, mri_dir, dry_run, environ, metadata
                 )
 
             if config.get("gear-thalamic_nuclei"):
                 do_gear_thalamic_nuclei(
-                    subject_id, mri_dir, dry_run, environ, metadata, log
+                    subject_id, mri_dir, dry_run, environ, metadata
                 )
 
             if config.get("gear-hypothalamic_subunits"):
                 do_gear_hypothalamic_subunits(
-                    subject_id, dry_run, environ, config["openmp"], log,
+                    subject_id, dry_run, environ, config["openmp"],
                 )
 
             if config.get("gear-register_surfaces"):
-                do_gear_register_surfaces(subject_id, dry_run, environ, log)
+                do_gear_register_surfaces(subject_id, dry_run, environ)
 
             if config.get("gear-convert_surfaces"):
-                do_gear_convert_surfaces(subject_dir, dry_run, environ, log)
+                do_gear_convert_surfaces(subject_dir, dry_run, environ)
 
             if config.get("gear-gtmseg"):
-                do_gtmseg(subject_id, dry_run, environ, log)
+                do_gtmseg(subject_id, dry_run, environ)
 
             if config.get("gear-convert_volumes"):
-                do_gear_convert_volumes(config, mri_dir, dry_run, environ, log)
+                do_gear_convert_volumes(config, mri_dir, dry_run, environ)
 
             if config.get("gear-convert_stats"):
-                do_gear_convert_stats(subject_id, dry_run, environ, metadata, log)
+                do_gear_convert_stats(subject_id, dry_run, environ, metadata)
 
             break  # If here, no error so it did run
 
@@ -816,7 +801,6 @@ def main(gtk_context):
     else:
         gtk_context.init_logging("debug")
     gtk_context.log_config()
-    log = gtk_context.log
 
     fw = gtk_context.client
 
@@ -831,7 +815,7 @@ def main(gtk_context):
 
     metadata = {"analysis": {"info": {}}}
 
-    set_core_count(config, log)
+    set_core_count(config)
 
 
     # get config for command by skipping gear config parameters
@@ -894,7 +878,7 @@ def main(gtk_context):
 
         pass
 
-    command = generate_command(subject_id, command_config, log)
+    command = generate_command(subject_id, command_config)
 
     return_code = 0
 
@@ -906,7 +890,7 @@ def main(gtk_context):
 
         if not config.get('gear-postprocessing-only'):
             ra_errors, ra_warnings, ra_return_code, metadata = execute_recon_all_command(command, environ, dry_run,
-                                                                                         subject_dir, log, metadata)
+                                                                                         subject_dir, metadata)
             errors.extend(ra_errors)
             warnings.extend(ra_warnings)
             return_code = ra_return_code
@@ -914,7 +898,7 @@ def main(gtk_context):
         if return_code == 0:
 
             post_errors, post_return_code, metadata = execute_postprocesing_command(config, environ, dry_run,
-                                                                                    subject_id, subject_dir, log,
+                                                                                    subject_id, subject_dir,
                                                                                     metadata)
             errors.extend(post_errors)
             return_code = post_return_code
@@ -997,7 +981,7 @@ if __name__ == "__main__":
     SUBJECTS_DIR = FLYWHEEL_BASE / "fs_subjects"
     LICENSE_FILE = FLYWHEEL_BASE / "license.txt"
     SUBJECTS_DIR.mkdir(parents=True, exist_ok=True)
-    log = logging.getLogger(__name__)
+
 
     # grab environment for gear (saved in Dockerfile)
     with open(FLYWHEEL_BASE / "gear_environ.json", "r") as f:
@@ -1011,6 +995,7 @@ if __name__ == "__main__":
         for k, v in environ.items():
             kv += k + "=" + v + " "
         log.debug("Environment: " + kv)
+        os.environ.update(environ)
 
     # link everything in existing SUBJECTS_DIR to new one.
     for fs_subj in Path(os.environ['SUBJECTS_DIR']).glob('*'):
