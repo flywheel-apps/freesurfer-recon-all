@@ -3,11 +3,14 @@
 
 import json
 import os
+import logging
 import sys
 import zipfile
 from pathlib import Path
 import pandas as pd
 import shutil
+
+
 
 import flywheel_gear_toolkit
 from flywheel_gear_toolkit.interfaces.command_line import exec_command
@@ -830,18 +833,6 @@ def main(gtk_context):
 
     set_core_count(config, log)
 
-    # grab environment for gear (saved in Dockerfile)
-    with open(FLYWHEEL_BASE / "gear_environ.json", "r") as f:
-        environ = json.load(f)
-
-        # use our subjects_dir
-        environ['SUBJECTS_DIR'] = str(SUBJECTS_DIR)
-
-        # Add environment to log if debugging
-        kv = ""
-        for k, v in environ.items():
-            kv += k + "=" + v + " "
-        log.debug("Environment: " + kv)
 
     # get config for command by skipping gear config parameters
     command_config = {}
@@ -992,6 +983,7 @@ if __name__ == "__main__":
     scratch_dir = run_in_tmp_dir()
     config_path = scratch_dir / 'config.json'
 
+
     # reset globals (poor form changing constants)
     global FLYWHEEL_BASE
     global OUTPUT_DIR
@@ -1005,6 +997,20 @@ if __name__ == "__main__":
     SUBJECTS_DIR = FLYWHEEL_BASE / "fs_subjects"
     LICENSE_FILE = FLYWHEEL_BASE / "license.txt"
     SUBJECTS_DIR.mkdir(parents=True, exist_ok=True)
+    log = logging.getLogger(__name__)
+
+    # grab environment for gear (saved in Dockerfile)
+    with open(FLYWHEEL_BASE / "gear_environ.json", "r") as f:
+        environ = json.load(f)
+
+        # use our subjects_dir
+        environ['SUBJECTS_DIR'] = str(SUBJECTS_DIR)
+
+        # Add environment to log if debugging
+        kv = ""
+        for k, v in environ.items():
+            kv += k + "=" + v + " "
+        log.debug("Environment: " + kv)
 
     # link everything in existing SUBJECTS_DIR to new one.
     for fs_subj in Path(os.environ['SUBJECTS_DIR']).glob('*'):
