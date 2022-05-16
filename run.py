@@ -29,14 +29,16 @@ REPO = "flywheel-apps"
 CONTAINER = f"{REPO}/{GEAR}"
 
 # globals will be set in __main__
-# FLYWHEEL_BASE = Path("/flywheel/v0")
-# OUTPUT_DIR = Path(FLYWHEEL_BASE / "output")
-# INPUT_DIR = Path(FLYWHEEL_BASE / "input")
-# SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
-# LICENSE_FILE = FREESURFER_HOME + "/license.txt"
-
-
+# But need to be here for tests
 FREESURFER_HOME = "/usr/local/freesurfer"
+FLYWHEEL_BASE = Path("/flywheel/v0")
+OUTPUT_DIR = Path(FLYWHEEL_BASE / "output")
+INPUT_DIR = Path(FLYWHEEL_BASE / "input")
+SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
+LICENSE_FILE = FREESURFER_HOME + "/license.txt"
+
+
+
 
 log = logging.getLogger(__name__)
 
@@ -835,7 +837,6 @@ def main(gtk_context):
     # code.  Add descriptions of problems to errors & warnings lists.
     # print("gtk_context.config:", json.dumps(gtk_context.config, indent=4))
 
-    environ["FS_LICENSE"] = str(LICENSE_FILE)
     license_list = list(Path("input/freesurfer_license").glob("*"))
     if len(license_list) > 0:
         fs_license_path = license_list[0]
@@ -890,7 +891,7 @@ def main(gtk_context):
     else:
 
         if not config.get('gear-postprocessing-only'):
-            ra_errors, ra_warnings, ra_return_code, metadata = execute_recon_all_command(command, environ, dry_run,
+            ra_errors, ra_warnings, ra_return_code, metadata = execute_recon_all_command(command, os.environ, dry_run,
                                                                                          subject_dir, metadata)
             errors.extend(ra_errors)
             warnings.extend(ra_warnings)
@@ -898,7 +899,7 @@ def main(gtk_context):
 
         if return_code == 0:
 
-            post_errors, post_return_code, metadata = execute_postprocesing_command(config, environ, dry_run,
+            post_errors, post_return_code, metadata = execute_postprocesing_command(config, os.environ, dry_run,
                                                                                     subject_id, subject_dir,
                                                                                     metadata)
             errors.extend(post_errors)
@@ -963,13 +964,6 @@ def main(gtk_context):
 
 
 if __name__ == "__main__":
-    # reset globals (poor form changing constants)
-    global FLYWHEEL_BASE
-    global OUTPUT_DIR
-    global INPUT_DIR
-    global SUBJECTS_DIR
-    global LICENSE_FILE
-
     # always run in a newly created "scratch" directory in /tmp/...
     scratch_dir = run_in_tmp_dir()
     config_path = scratch_dir / 'config.json'
@@ -988,6 +982,7 @@ if __name__ == "__main__":
 
         # use our subjects_dir
         environ['SUBJECTS_DIR'] = str(SUBJECTS_DIR)
+        environ["FS_LICENSE"] = str(LICENSE_FILE)
 
         # Add environment to log if debugging
         kv = ""
@@ -1011,6 +1006,6 @@ if __name__ == "__main__":
     # mkdir and removedirs is needed to not leave trailing tmp directories
     scratch_dir.mkdir()
     os.removedirs(scratch_dir)
-
+    log.info(f'about to sys exit {return_code}')
     sys.exit(return_code)
 

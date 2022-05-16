@@ -7,7 +7,7 @@ import run
 
 fs_dir = Path("/usr/local/freesurfer/")
 subjects_dir = Path(fs_dir / "subjects")
-
+env_config = '/flywheel/v0/gear_environ.json'
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ def test_convert_stats_works(caplog, install_gear, print_caplog):
 
     install_gear("stats.zip")
 
-    with open("/tmp/gear_environ.json", "r") as f:
+    with open(env_config, "r") as f:
         environ = json.load(f)
 
     metadata = {"analysis": {"info": {}}}
@@ -46,7 +46,7 @@ def test_convert_volumes_works(caplog, install_gear, print_caplog):
 
     mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
 
-    with open("/tmp/gear_environ.json", "r") as f:
+    with open(env_config, "r") as f:
         environ = json.load(f)
 
     config = {
@@ -72,7 +72,7 @@ def test_brainstem_works(caplog, install_gear, print_caplog):
 
     metadata = {"analysis": {"info": {}}}
 
-    with open("/tmp/gear_environ.json", "r") as f:
+    with open(env_config, "r") as f:
         environ = json.load(f)
 
     run.do_gear_brainstem_structures(
@@ -96,7 +96,7 @@ def test_hippo_works(caplog, install_gear, print_caplog):
 
     mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
 
-    with open("/tmp/gear_environ.json", "r") as f:
+    with open(env_config, "r") as f:
         environ = json.load(f)
 
     # This takes 20 minutes!
@@ -113,7 +113,7 @@ def test_gtmseg_dry_run_works(caplog, search_caplog, print_caplog):
 
     caplog.set_level(logging.DEBUG)
 
-    with open("/tmp/gear_environ.json", "r") as f:
+    with open(env_config, "r") as f:
         environ = json.load(f)
 
     run.do_gtmseg("sub-TOME3024", True, environ)
@@ -131,7 +131,7 @@ def test_do_gear_thalamic_nuclei_dry_run_works(
 
     install_gear("thalamic.zip")
 
-    with open("/tmp/gear_environ.json", "r") as f:
+    with open(env_config, "r") as f:
         environ = json.load(f)
 
     metadata = {"analysis": {"info": {}}}
