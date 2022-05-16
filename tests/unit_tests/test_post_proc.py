@@ -23,7 +23,7 @@ def test_convert_stats_works(caplog, install_gear, print_caplog):
 
     metadata = {"analysis": {"info": {}}}
 
-    run.do_gear_convert_stats("sub-TOME3024", False, environ, metadata, log)
+    run.do_gear_convert_stats("sub-TOME3024", False, environ, metadata)
 
     print_caplog(caplog)
 
@@ -53,7 +53,7 @@ def test_convert_volumes_works(caplog, install_gear, print_caplog):
         "gear-hippocampal_subfields": True,
         "gear-brainstem_structures": True,
     }
-    run.do_gear_convert_volumes(config, mri_dir, False, environ, log)
+    run.do_gear_convert_volumes(config, mri_dir, False, environ)
 
     print_caplog(caplog)
 
@@ -76,7 +76,7 @@ def test_brainstem_works(caplog, install_gear, print_caplog):
         environ = json.load(f)
 
     run.do_gear_brainstem_structures(
-        "sub-TOME3024", mri_dir, False, environ, metadata, log
+        "sub-TOME3024", mri_dir, False, environ, metadata
     )
 
     print_caplog(caplog)
@@ -101,7 +101,7 @@ def test_hippo_works(caplog, install_gear, print_caplog):
 
     # This takes 20 minutes!
     run.do_gear_hippocampal_subfields(
-        "sub-TOME3024", mri_dir, False, environ, metadata, log
+        "sub-TOME3024", mri_dir, False, environ, metadata
     )
 
     print_caplog(caplog)
@@ -116,7 +116,7 @@ def test_gtmseg_dry_run_works(caplog, search_caplog, print_caplog):
     with open("/tmp/gear_environ.json", "r") as f:
         environ = json.load(f)
 
-    run.do_gtmseg("sub-TOME3024", True, environ, log)
+    run.do_gtmseg("sub-TOME3024", True, environ)
 
     print_caplog(caplog)
 
@@ -138,7 +138,7 @@ def test_do_gear_thalamic_nuclei_dry_run_works(
 
     mri_dir = f"{str(subjects_dir)}/sub-TOME3024/mri"
 
-    run.do_gear_thalamic_nuclei("sub-TOME3024", mri_dir, True, environ, metadata, log)
+    run.do_gear_thalamic_nuclei("sub-TOME3024", mri_dir, True, environ, metadata)
 
     print(".metadat.json", json.dumps(metadata, indent=4))
     print_caplog(caplog)

@@ -35,6 +35,7 @@ CONTAINER = f"{REPO}/{GEAR}"
 # SUBJECTS_DIR = Path("/usr/local/freesurfer/subjects")
 # LICENSE_FILE = FREESURFER_HOME + "/license.txt"
 
+
 FREESURFER_HOME = "/usr/local/freesurfer"
 
 log = logging.getLogger(__name__)
@@ -962,18 +963,16 @@ def main(gtk_context):
 
 
 if __name__ == "__main__":
-
-    # always run in a newly created "scratch" directory in /tmp/...
-    scratch_dir = run_in_tmp_dir()
-    config_path = scratch_dir / 'config.json'
-
-
     # reset globals (poor form changing constants)
     global FLYWHEEL_BASE
     global OUTPUT_DIR
     global INPUT_DIR
     global SUBJECTS_DIR
     global LICENSE_FILE
+
+    # always run in a newly created "scratch" directory in /tmp/...
+    scratch_dir = run_in_tmp_dir()
+    config_path = scratch_dir / 'config.json'
 
     FLYWHEEL_BASE = scratch_dir
     OUTPUT_DIR = FLYWHEEL_BASE / "output"

@@ -13,7 +13,7 @@ def test_core_count_empty_works(capsys):
 
     config = dict()
 
-    set_core_count(config, log)
+    set_core_count(config)
 
     assert config["openmp"] == os.cpu_count()
 
@@ -22,7 +22,7 @@ def test_core_count_0_gets_max(capsys):
 
     config = {"n_cpus": 0}
 
-    set_core_count(config, log)
+    set_core_count(config)
 
     print(config)
 
@@ -33,7 +33,7 @@ def test_core_count_tomuch_gets_max(capsys):
 
     config = {"n_cpus": 1000}
 
-    set_core_count(config, log)
+    set_core_count(config)
 
     print(config)
 
@@ -44,7 +44,7 @@ def test_core_count_1_gets_1(capsys):
 
     config = {"n_cpus": 1}
 
-    set_core_count(config, log)
+    set_core_count(config)
 
     print(config)
 
