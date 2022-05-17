@@ -156,6 +156,14 @@ def get_input_file():
         log.warning("What?  Found %s NIfTI files!", len(anatomical_list))
         anatomical = str(anatomical_list[0])
 
+    anat_dir = os.path.dirname(anatomical)
+    anat_base = os.path.basename(anatomical)
+    safe_anatomical = sanitize_filename(anat_base)
+    # safe_anatomical = safe_anatomical.replace('(', '_')
+    # safe_anatomical = safe_anatomical.replace(')', '_')
+    safe_anatomical = os.path.join(anat_dir, safe_anatomical)
+    os.rename(anatomical, safe_anatomical)
+    anatomical = f'"{safe_anatomical}"'
     log.info("anatomical is '%s'", anatomical)
 
     return anatomical
