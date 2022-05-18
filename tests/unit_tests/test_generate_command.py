@@ -25,7 +25,8 @@ def test_generate_command_works(capsys):
         "expert": "/flywheel/v0/input/expert/expert.opts",
     }
 
-    command = generate_command(subject_id, command_config, log)
+
+    command = generate_command(subject_id, command_config)
 
     print(command)
 

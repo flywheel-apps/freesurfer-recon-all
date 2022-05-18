@@ -2,6 +2,7 @@
 
 import logging
 import re
+from flywheel_gear_toolkit.utils.file import sanitize_filename
 
 log = logging.getLogger(__name__)
 
@@ -18,14 +19,14 @@ def make_file_name_safe(input_basename, replace_str=""):
     :rtype: str
     """
 
-    safe_patt = re.compile(r"[^A-Za-z0-9_\-.]+")
-    # if the replacement is not a string or not safe, set replace_str to x
-    if not isinstance(replace_str, str) or safe_patt.match(replace_str):
-        log.warning("{} is not a safe string, removing instead".format(replace_str))
-        replace_str = ""
+    # safe_patt = re.compile(r"[^A-Za-z0-9_\-.]+")
+    # # if the replacement is not a string or not safe, set replace_str to x
+    # if not isinstance(replace_str, str) or safe_patt.match(replace_str):
+    #     log.warning("{} is not a safe string, removing instead".format(replace_str))
+    #     replace_str = ""
 
     # Replace non-alphanumeric (or underscore) characters with replace_str
-    safe_output_basename = re.sub(safe_patt, replace_str, input_basename)
+    safe_output_basename = sanitize_filename(replace_str)
 
     if safe_output_basename.startswith("."):
         safe_output_basename = safe_output_basename[1:]

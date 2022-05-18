@@ -48,7 +48,7 @@ main() {
     find . -type f -name '*.pyc' -delete
     rm -rf .coverage htmlcov
 
-    python -m pytest tests/unit_tests tests/integration_tests --exitfirst --cov=run --cov-report= "$@"
+    python -m pytest tests/unit_tests tests/integration_tests -vv --exitfirst --cov=run --cov-report= "$@"
 
     log "INFO: Reporting coverage ..."
     local COVERAGE_ARGS="--skip-covered"
