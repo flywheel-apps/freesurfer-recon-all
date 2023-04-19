@@ -43,7 +43,8 @@ RUN wget \
     && rm -f Miniconda3-py38_4.8.3-Linux-x86_64.sh
 
 # Installing precomputed python packages
-RUN conda install -y python=3.8.5 && \
+RUN conda config --set auto_update_conda false && \
+    conda install -y python=3.8.5 && \
     chmod -R a+rX /root/miniconda3; sync && \
     chmod +x /root/miniconda3/bin/*; sync && \
     conda build purge-all; sync && \
