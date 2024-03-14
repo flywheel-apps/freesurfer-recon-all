@@ -10,13 +10,31 @@
       "image": "flywheel/freesurfer-recon-all:1.2.1_7.2.0"
     },
     "flywheel": {
-      "suite": "FreeSurfer"
+      "suite": "Image Processing",
+      "classification": {
+        "species": [
+          "Human"
+        ],
+        "organ": [
+          "Brain"
+        ],
+        "therapeutic_area": [
+          "Neurology",
+          "Psychiatry/Psychology"
+        ],
+        "modality": [
+          "MR"
+        ],
+        "function": [
+          "Image Processing - Structural"
+        ]
+      }
     }
   },
   "inputs": {
     "api-key": {
       "base": "api-key",
-      "read-only": true
+      "read-only": false
     },
     "anatomical": {
       "description": "Anatomical NIfTI file, DICOM archive, or previous freesurfer-recon-all zip archive. NOTE: A freesurfer-recon-all Gear output can be used provided the filename is preserved from its initial output (e.g., freesurfer-recon-all_<subject_code>*.zip)",
@@ -118,7 +136,7 @@
       "default": false,
       "description": "After running recon-all run gtmseg on the subject. (Default=False)."
     },
-     "gear-hypothalamic_subunits": {
+    "gear-hypothalamic_subunits": {
       "type": "boolean",
       "default": false,
       "description": "After running recon-all run Segmentation of hypothalamic subunits (mri_segment_hypothalamic_subunits) on the subject. (Default=False)."
@@ -191,6 +209,6 @@
   "maintainer": "Flywheel <support@flywheel.io>",
   "cite": "For citation information, please visit: https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferMethodsCitation.",
   "license": "Other",
-  "source": "https://github.com/flywheel-apps/freesurfer-recon-all",
-  "url": "https://surfer.nmr.mgh.harvard.edu"
+  "source": "https://surfer.nmr.mgh.harvard.edu",
+  "url": "https://github.com/flywheel-apps/freesurfer-recon-all"
 }
