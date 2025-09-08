@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repo has moved to [https://gitlab.com/flywheel-io/scientific-solutions/gears/freesurfer-recon-all](https://gitlab.com/flywheel-io/scientific-solutions/gears/freesurfer-recon-all)
+
 # freesurfer-recon-all
 Gear that runs FreeSurfer [v7.2.0 Release (July 19, 2021)](https://surfer.nmr.mgh.harvard.edu/fswiki/ReleaseNotes) based on the official FS docker container.
 
