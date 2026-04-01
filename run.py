@@ -39,9 +39,11 @@ def set_core_count(config, log):
 
     os_cpu_count = os.cpu_count()
     log.info("os.cpu_count() = %d", os_cpu_count)
-    n_cpus = config.get("n_cpus")
+    n_cpus = 0
+    if "n_cpus" in config:
+        n_cpus = config.get("n_cpus")
+        del config["n_cpus"]  # no matter what happens, don't pass along n_cpus
     if n_cpus:
-        del config["n_cpus"]
         if n_cpus > os_cpu_count:
             log.warning("n_cpus > number available, using max %d", os_cpu_count)
             config["openmp"] = os_cpu_count
@@ -122,7 +124,8 @@ def get_input_file(log):
 
         if len(anatomical_list) == 0:
             log.critical(
-                "Anatomical input could not be found in %s! Exiting (1)", str(anat_dir),
+                "Anatomical input could not be found in %s! Exiting (1)",
+                str(anat_dir),
             )
             os.system(f"ls -lRa {str(anat_dir)}")
             sys.exit(1)
@@ -379,7 +382,13 @@ def do_gear_hypothalamic_subunits(subject_id, dry_run, environ, threads, log):
     """
 
     log.info("Starting Segmentation of hypothalamic subunits...")
-    cmd = ["mri_segment_hypothalamic_subunits", '--s', str(subject_id), "--threads", str(threads)]
+    cmd = [
+        "mri_segment_hypothalamic_subunits",
+        "--s",
+        str(subject_id),
+        "--threads",
+        str(threads),
+    ]
     exec_command(cmd, environ=environ, dry_run=dry_run, cont_output=True)
 
     # These files are also created:
@@ -643,7 +652,7 @@ def do_gtmseg(subject_id, dry_run, environ, log):
 
 
 def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metadata={}):
-    """ execute the recon_all command
+    """execute the recon_all command
 
     Given a command generated from `generate_command()`, attempt to execute recon all.
     This function provides the correct metadata required for a "dry-run" of the gear
@@ -688,9 +697,7 @@ def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metad
                 metadata = {
                     "analysis": {
                         "info": {
-                            "dry_run": {
-                                "How dry I am": "Say to Mister Temperance...."
-                            }
+                            "dry_run": {"How dry I am": "Say to Mister Temperance...."}
                         }
                     }
                 }
@@ -715,8 +722,10 @@ def execute_recon_all_command(command, environ, dry_run, subject_dir, log, metad
     return errors, warnings, return_code, metadata
 
 
-def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_dir, log, metadata={}):
-    """ execute post processing commands
+def execute_postprocesing_command(
+    config, environ, dry_run, subject_id, subject_dir, log, metadata={}
+):
+    """execute post processing commands
 
     attempts to run post-processing routines on a completed recon-all direectory.
 
@@ -736,8 +745,6 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
         metadata (dict): the same metadata dict from input, only modified if dry-run is True
 
     """
-
-
 
     num_tries = 0
 
@@ -767,7 +774,11 @@ def execute_postprocesing_command(config, environ, dry_run, subject_id, subject_
 
             if config.get("gear-hypothalamic_subunits"):
                 do_gear_hypothalamic_subunits(
-                    subject_id, dry_run, environ, config["openmp"], log,
+                    subject_id,
+                    dry_run,
+                    environ,
+                    config["openmp"],
+                    log,
                 )
 
             if config.get("gear-register_surfaces"):
@@ -890,26 +901,32 @@ def main(gtk_context):
 
     else:
 
-        if not config.get('gear-postprocessing-only'):
-            ra_errors, ra_warnings, ra_return_code, metadata = execute_recon_all_command(command, environ, dry_run,
-                                                                                         subject_dir, log, metadata)
+        if not config.get("gear-postprocessing-only"):
+            (
+                ra_errors,
+                ra_warnings,
+                ra_return_code,
+                metadata,
+            ) = execute_recon_all_command(
+                command, environ, dry_run, subject_dir, log, metadata
+            )
             errors.extend(ra_errors)
             warnings.extend(ra_warnings)
             return_code = ra_return_code
 
         if return_code == 0:
 
-            post_errors, post_return_code, metadata = execute_postprocesing_command(config, environ, dry_run,
-                                                                                    subject_id, subject_dir, log,
-                                                                                    metadata)
+            post_errors, post_return_code, metadata = execute_postprocesing_command(
+                config, environ, dry_run, subject_id, subject_dir, log, metadata
+            )
             errors.extend(post_errors)
             return_code = post_return_code
 
     # zip entire output/<subject_id> folder into
     #  <gear_name>_<subject_id>_<analysis.id>.zip
     zip_file_name = (
-            gtk_context.manifest["name"]
-            + f"_{subject_id}_{gtk_context.destination['id']}.zip"
+        gtk_context.manifest["name"]
+        + f"_{subject_id}_{gtk_context.destination['id']}.zip"
     )
     if subject_dir.exists():
         log.info("Saving %s in %s as output", subject_id, SUBJECTS_DIR)

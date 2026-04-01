@@ -157,7 +157,7 @@ def test_dcm_zip_works(capfd, search_sysout, install_gear, print_captured):
 def test_wet_run_fails(capfd, search_sysout, install_gear, print_captured):
 
     # clean up after previous tests so this one will run
-    shutil.rmtree("/usr/local/freesurfer/subjects/sub-42")
+    shutil.rmtree("/usr/local/freesurfer/subjects/sub-42", ignore_errors=True)
 
     user_json = Path(Path.home() / ".config/flywheel/user.json")
     if not user_json.exists():
